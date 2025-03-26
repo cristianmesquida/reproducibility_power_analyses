@@ -37,4 +37,4 @@ The folder r_scripts/ contains all analysis scripts that were used to compute al
 -	08_figures.Rmd: an R Markdown document to generate the figures reported in the manuscript.
 
 Figure
-The folder figures/ contains the figures originated from the statistical analyses
+The folder figures/ contains the figures originated from the statistical analyses.
