@@ -1,0 +1,169 @@
+---
+title: "Descriptive of ES"
+output: html_document
+date: "2025-02-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load packages
+library(here)
+library(dplyr)
+library(effectsize)
+library(ggplot2)
+
+# Execute this code to upload the the function descriptive_stats()
+source(here("r_scripts", "data_analysis", "03_descriptive_stats_function.R")) 
+source(here("r_scripts", "data_analysis", "02_clean_data.R")) 
+
+```
+
+# Descriptive information of effect sizes (by type) and sample sizes 
+
+## Cohen's d
+```{r}
+
+reported_cohen_d <- cleaned_data %>% 
+  filter(power_analysis == "a priori" &
+         type_standardised_es == "Cohen's d family" &
+         !is.na(magnitude_es)) %>% 
+  pull(magnitude_es) 
+
+gpower_cohen_d <- cleaned_data %>% 
+  filter(power_analysis == "a priori" &
+         type_es_in_gpower %in% c("Cohen's ds", "Cohen's dz") &
+         !is.na(magnitude_es_in_gpower)) %>% 
+  pull(magnitude_es_in_gpower)
+
+combined_cohen_d <- c(reported_cohen_d, gpower_cohen_d)
+
+descriptive_stats(combined_cohen_d)
+
+```
+
+## Number of ES = 0.5 
+```{r, echo=FALSE}
+
+sum(combined_cohen_d == 0.5) 
+
+```
+
+
+## ES justification for ES larger than 1
+```{r, echo=FALSE}
+
+cleaned_data %>%
+  filter(power_analysis == "a priori" &
+         type_standardised_es == "Cohen's d family" & 
+         magnitude_es > 0.8) %>%
+  select(study_title, es_justification, magnitude_es)
+  
+```
+
+
+## Hedges' g
+```{r}
+
+reported_hedges_g <- cleaned_data %>%
+  filter(power_analysis == "a priori" & 
+         type_standardised_es == "Hedge's g family" &
+         !is.na(magnitude_es)) %>% 
+  pull(magnitude_es) 
+
+descriptive_stats(reported_hedges_g)
+            
+```
+
+## Cohen's f
+```{r}
+
+reported_cohen_f <- cleaned_data %>%
+  filter(power_analysis == "a priori" & 
+         type_standardised_es == "Cohen's f" &
+         !is.na(magnitude_es)) %>% 
+  pull(magnitude_es) 
+
+gpower_cohen_f <- cleaned_data %>%
+  filter(power_analysis == "a priori" & 
+         type_es_in_gpower == "Cohen's f" &
+         !is.na(magnitude_es_in_gpower)) %>% 
+  pull(magnitude_es_in_gpower)
+
+combined_cohen_f <- c(reported_cohen_f, gpower_cohen_f)
+
+descriptive_stats(combined_cohen_f)
+
+```
+
+#Cohen's f 
+## Number of ES = 0.5 
+```{r, echo=FALSE}
+
+sum(combined_cohen_f == 0.25) 
+
+```
+
+
+## Partial eta squared
+```{r}
+
+reported_partial_eta <- cleaned_data %>%
+  filter(power_analysis == "a priori" &
+         type_standardised_es == "eta partial squared (ηp^2)" &
+         !is.na(magnitude_es)) %>% 
+  pull(magnitude_es)
+
+descriptive_stats(reported_partial_eta)
+
+```
+
+```{r}
+
+reported_eta <- cleaned_data %>%
+  filter(power_analysis == "a priori" & 
+         type_standardised_es == "eta squared (η^2)" &
+         !is.na(magnitude_es)) %>% 
+  pull(magnitude_es)
+
+descriptive_stats(reported_eta)
+
+```
+
+## Sample sizes of studies used as ES justification
+```{r echo=FALSE}
+
+(previous_study <- cleaned_data %>%
+  select(sample_previous_study) %>%
+  filter(!is.na(sample_previous_study)) %>%
+  mutate(extracted_samples = stringr::str_extract_all(sample_previous_study, "\\d+")) %>% 
+  unnest(extracted_samples) %>%
+  mutate(extracted_samples = as.numeric(extracted_samples)) %>%
+  summarise(median = median(extracted_samples),
+            average = round(mean(extracted_samples), 0),
+            sd = round(sd(extracted_samples), 0),
+            maximum = max(extracted_samples),
+            minimum = min(extracted_samples)))
+
+```
+When researchers used a previous study as ES justification, the average sample size
+was `r previous_study[1,2]` ± `r previous_study[1,3]` with a median of 
+`r previous_study[1,1]`.
+
+
+## Match between statistical test reported in a priori power analysis and 
+## in study
+```{r echo=FALSE}
+
+cleaned_data %>%
+  filter(power_analysis == "a priori") %>%
+  select(statistical_test_power, statistical_test_study) %>%
+  filter(!statistical_test_power %in% c("not reported", "unclear") &
+         statistical_test_study != "unclear") %>%
+  mutate(match = as.character(statistical_test_power) ==
+           as.character(statistical_test_study)) %>%
+  group_by(match) %>%
+  summarise(n = n()) %>% 
+  mutate(prop = n / sum(n) *100)
+
+```
