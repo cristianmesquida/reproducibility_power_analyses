@@ -3,7 +3,7 @@ This repository contains all materials, data and code to reproduce the analyses 
 Manuscript:
 The folder manuscript/ contains the following documents:
 -	preprint: a PDF document containing the preprint of the study. 
--   supplementary_file: a PDF document containing additional information about how the shape of the interaction determines the size of the effect.
+- supplementary_file: a PDF document containing additional information about how the shape of the interaction determines the size of the effect.
 -	preregistration: a PDF document containing the preregistration.
 
 Materials:
@@ -22,12 +22,13 @@ The folder raw_data/ contains:
 Code:
 The folder r_scripts/ contains all analysis scripts that were used to compute all results presented in the manuscript.
 -	sample_size_calculation.R contains the sample size calculation based on a precision analysis.
--	The subfolder intercoder_agreement/ contains the functions to process data and calculate interrater agreement between raters, including:
+
+The subfolder intercoder_agreement/ contains the functions to process data and calculate interrater agreement between raters, including:
 -	01_checking_disagreements.R produces files “disagreements3.xlsx” and “disgreements2.xlsx”.
 -	02_intercoder _agreement_function.R contains the functions used to assess intercoder agreement.
 -	03_intercoder_agreement.Rmd an R Markdown documents presenting the results of the intercoder agreement across variables.
 
--	The subfolder data_analysis/ contains the scripts to load data and conduct statistical analyses, including:
+The subfolder data_analysis/ contains the scripts to load data and conduct statistical analyses, including:
 -	01_consolidate_data.R merges columns from “disagreements3.xlsx” and “disagreements2.xlsx” containing responses after disagreements have been resolved.
 -	02_clean_data.R cleans, processes and loads data used in our analyses. 
 -	03_descriptive_stats_function.R contains a function used in “10_descriptive_es.Rmd” to generate descriptive statistics.
@@ -37,5 +38,7 @@ The folder r_scripts/ contains all analysis scripts that were used to compute al
 -	07_descriptive_es.Rmd: an R Markdown document with the descriptive results on the effect sizes reported in a priori power analyses.
 -	08_figures.Rmd: an R Markdown document to generate the figures reported in the manuscript.
 
-Figure:
+The subfolder supplementary_information/ contains the scripts to reproduce the figures reported in the Supplementary information.
+
+Figures:
 The folder figures/ contains the figures originated from the statistical analyses.

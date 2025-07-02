@@ -1,3 +1,11 @@
 .idea
 data/es_d.xlsx
 data/reprocheck_joe.xlsx
+.DS_Store
+.Rhistory
+figures/.DS_Store
+data/.DS_store
+manuscript/.DS_Store
+materials/.DS_Store
+r_scripts/.DS_Store
+r_scripts/supplementary_information/.DS_Store
