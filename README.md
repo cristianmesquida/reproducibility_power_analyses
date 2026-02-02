@@ -11,7 +11,9 @@ reproducibility_power_analyses/
 ├── manuscript/ 
 │   ├── preprint.pdf                  # Preprint of the study
 │   ├── manuscript.qmd                # Quarto document to fully reproduce the manuscript
+|   ├── manuscript.pdf                # PDF document of the manuscript
 |   ├── appendix.qmd                  # Quarto document to fully reproduce supplementary file
+|   ├── appendix.pdf                  # PDF document to fully reproduce supplementary file
 │   └── references.bib                # Bib file containing references used in the manuscript
 │
 ├── materials/ 
