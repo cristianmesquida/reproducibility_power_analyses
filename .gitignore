@@ -9,3 +9,6 @@ manuscript/.DS_Store
 materials/.DS_Store
 r_scripts/.DS_Store
 r_scripts/supplementary_information/.DS_Store
+.Rproj.user
+manuscript/appendix.qmd
+manuscript/appendix.pdf

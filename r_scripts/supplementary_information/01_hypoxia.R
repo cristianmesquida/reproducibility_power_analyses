@@ -25,17 +25,14 @@ ggplot(data = df, aes(x = time,
                        color = intervention)) +
   geom_line(size = 1) +
   geom_point(size = 4, fill = "white") +
-  xlab(NULL) +
+  xlab("Number of bouts") +
   ylab("Power output (W)") +
-  scale_color_manual(values = c("normoxia" = "#56B4E9", 
-                                "moderate hypoxia" = "#E69F00", 
-                                "severe hypoxia" = "#D55E00")) +  # Color-blind friendly palette
   scale_y_continuous(limits = c(600, 900), 
                      breaks = seq(600, 900, by = 50)) +
-  theme(legend.title = element_blank(),  # Remove legend title
+  theme(legend.title = element_blank(),  
         legend.position = "right", 
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
         axis.line = element_line(colour = "black")) +
-  theme(text = element_text(size = 20))
+  theme(text = element_text(size = 10))

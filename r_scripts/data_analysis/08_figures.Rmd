@@ -1,24 +1,24 @@
 ---
 title: "Figures"
-output: html_document
 date: "2025-01-29"
 ---
 
-```{r include=FALSE, echo=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r echo=FALSE, warning = FALSE, message = FALSE}
 
 # Load packages
 library(here)
-library(tidyverse)
+library(ggplot2)
+library(dplyr)
 library(patchwork)
 
 # Load data
 source(here("r_scripts", "data_analysis", "02_clean_data.R"))
-
 ```
 
 # Reporting practices
+
 ## Type of standardised ES reported in a priori power analyses
+
 ```{r echo = FALSE}
 
 # Create a plot for the type of standardised ES reported in a priori power analyses
@@ -64,8 +64,8 @@ source(here("r_scripts", "data_analysis", "02_clean_data.R"))
 ggsave(here("figures", "type_es.pdf"), width = 4, height = 4)
 ```
 
+## Effect sizes justifications
 
-## Effect sizes jsutifications
 ```{r echo=FALSE}
 cleaned_data %>% 
   filter(power_analysis == "a priori" &
@@ -112,6 +112,7 @@ ggsave(here("figures", "es_justification.pdf"), width = 4, height = 4)
 ```
 
 ## Statistical tests reported in a priori power analyses
+
 ```{r echo = FALSE}
 # Create a plot for statistical tests reported in a priori power analyses
 (statistical_test <- cleaned_data %>% 
@@ -149,7 +150,6 @@ ggsave(here("figures", "statistical_test.pdf"), width = 4, height = 4)
 
 ```
 
-
 ```{r echo = FALSE}
 
 # Combine the 3 plots in one single figure
@@ -164,10 +164,9 @@ ggsave(here("figures", "figures.pdf"),
 
 ```
 
-
 ## Reproducibility of a priori power analyses
-``` {r echo = FALSE}
 
+```{r echo = FALSE}
 cleaned_data %>%
   filter(power_analysis == "a priori") %>%
   select(reproducibility) %>%
@@ -176,7 +175,7 @@ cleaned_data %>%
                                                       reproducibility)) %>%
   group_by(reproducibility) %>%
   summarise(n = n()) %>%
-  mutate(prop = ceiling(n / sum(n)*100)) %>%
+  mutate(prop = n / sum(n)*100) %>%
   arrange(desc(prop)) %>%
   mutate(reproducibility = factor(reproducibility, 
                                   levels = reproducibility)) %>%
@@ -187,9 +186,11 @@ cleaned_data %>%
   scale_y_continuous(breaks = seq(0, 100, 10), 
                      limits = c(0,100), 
                      expand = c(0,0)) +
- scale_fill_manual(values = c("non-reproducible" = "#D3D3D3",   
-                               "conditionally reproducible" = "#A9A9A9",
-                               "reproducible" = "#696969")) +
+ scale_fill_manual(values = c(
+    "non-reproducible" = "#E69F00",      
+    "conditionally reproducible" = "#56B4E9", 
+    "reproducible" = "#009E73")
+    ) +
   scale_x_discrete(labels = c("non-reproducible", 
                               "conditionally \nreproducible", 
                               "reproducible")) +
@@ -205,9 +206,9 @@ cleaned_data %>%
 
 # save plot
 ggsave(here("figures", "reproducibility.pdf"), width = 4, height = 4)
-
 ```
 
+## Distribution of effect sizes
 
 ```{r}
 es_distribution <- cleaned_data %>% 
@@ -251,6 +252,4 @@ es_distribution <- cleaned_data %>%
                                           linewidth = 0.3))
 
 ggsave(here("figures", "es_distribution.pdf"), width = 8, height = 4)
-
 ```
-

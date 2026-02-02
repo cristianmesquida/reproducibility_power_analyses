@@ -10,7 +10,6 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load packages
 library(here)
 library(dplyr)
-library(effectsize)
 library(ggplot2)
 
 # Execute this code to upload the the function descriptive_stats()
@@ -22,8 +21,7 @@ source(here("r_scripts", "data_analysis", "02_clean_data.R"))
 # Descriptive information of effect sizes (by type) and sample sizes 
 
 ## Cohen's d
-```{r}
-
+```{r, cohen_d_stats}
 reported_cohen_d <- cleaned_data %>% 
   filter(power_analysis == "a priori" &
          type_standardised_es == "Cohen's d family" &
@@ -38,11 +36,10 @@ gpower_cohen_d <- cleaned_data %>%
 
 combined_cohen_d <- c(reported_cohen_d, gpower_cohen_d)
 
-descriptive_stats(combined_cohen_d)
-
+cohen_d_stats <- descriptive_stats(combined_cohen_d)
 ```
 
-## Number of ES = 0.5 
+## Number of Cohen's d = 0.5 
 ```{r, echo=FALSE}
 
 sum(combined_cohen_d == 0.5) 
@@ -63,20 +60,19 @@ cleaned_data %>%
 
 
 ## Hedges' g
-```{r}
+```{r hedges_g_stats}
 
-reported_hedges_g <- cleaned_data %>%
+hedges_g_stats <- cleaned_data %>%
   filter(power_analysis == "a priori" & 
          type_standardised_es == "Hedge's g family" &
          !is.na(magnitude_es)) %>% 
-  pull(magnitude_es) 
-
-descriptive_stats(reported_hedges_g)
+  pull(magnitude_es) %>% 
+  descriptive_stats()
             
 ```
 
 ## Cohen's f
-```{r}
+```{r cohen_f_stats}
 
 reported_cohen_f <- cleaned_data %>%
   filter(power_analysis == "a priori" & 
@@ -92,48 +88,45 @@ gpower_cohen_f <- cleaned_data %>%
 
 combined_cohen_f <- c(reported_cohen_f, gpower_cohen_f)
 
-descriptive_stats(combined_cohen_f)
+cohen_f_stats <- descriptive_stats(combined_cohen_f)
 
 ```
 
-#Cohen's f 
-## Number of ES = 0.5 
-```{r, echo=FALSE}
+
+# Number of Cohen's f = 0.25 
+```{r echo=FALSE}
 
 sum(combined_cohen_f == 0.25) 
 
 ```
 
-
 ## Partial eta squared
-```{r}
+```{r partial_eta_stats}
 
-reported_partial_eta <- cleaned_data %>%
+partial_eta_stats <- cleaned_data %>%
   filter(power_analysis == "a priori" &
          type_standardised_es == "eta partial squared (ηp^2)" &
          !is.na(magnitude_es)) %>% 
-  pull(magnitude_es)
-
-descriptive_stats(reported_partial_eta)
+  pull(magnitude_es) %>% 
+  descriptive_stats()
 
 ```
 
-```{r}
+```{r eta_stats}
 
-reported_eta <- cleaned_data %>%
+eta_stats <- cleaned_data %>%
   filter(power_analysis == "a priori" & 
          type_standardised_es == "eta squared (η^2)" &
          !is.na(magnitude_es)) %>% 
-  pull(magnitude_es)
-
-descriptive_stats(reported_eta)
+  pull(magnitude_es) %>% 
+  descriptive_stats()
 
 ```
 
 ## Sample sizes of studies used as ES justification
-```{r echo=FALSE}
+```{r sample_previous_study, echo=FALSE}
 
-(previous_study <- cleaned_data %>%
+previous_study <- cleaned_data %>%
   select(sample_previous_study) %>%
   filter(!is.na(sample_previous_study)) %>%
   mutate(extracted_samples = stringr::str_extract_all(sample_previous_study, "\\d+")) %>% 
@@ -143,13 +136,8 @@ descriptive_stats(reported_eta)
             average = round(mean(extracted_samples), 0),
             sd = round(sd(extracted_samples), 0),
             maximum = max(extracted_samples),
-            minimum = min(extracted_samples)))
-
+            minimum = min(extracted_samples))
 ```
-When researchers used a previous study as ES justification, the average sample size
-was `r previous_study[1,2]` ± `r previous_study[1,3]` with a median of 
-`r previous_study[1,1]`.
-
 
 ## Match between statistical test reported in a priori power analysis and 
 ## in study
@@ -163,7 +151,7 @@ cleaned_data %>%
   mutate(match = as.character(statistical_test_power) ==
            as.character(statistical_test_study)) %>%
   group_by(match) %>%
-  summarise(n = n()) %>% 
-  mutate(prop = n / sum(n) *100)
+  summarise(n = n(), .groups = "drop") %>% 
+  mutate(prop = n / sum(cleaned_data$power_analysis == "a priori")*100)
 
 ```

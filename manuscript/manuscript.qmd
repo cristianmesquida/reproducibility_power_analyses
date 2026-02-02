@@ -1,0 +1,885 @@
+---
+title: "Prevalence, reporting practices, and methodological quality of a priori power analyses in sports and exercise science research"
+author:
+  - name: "Cristian Mesquida¹²"
+  - name: "Jennifer Murphy²"
+  - name: "Joe Warne²"
+  - name: "Daniël Lakens¹"
+format: 
+ pdf:
+    documentclass: article
+    include-in-header: header.tex
+bibliography: references.bib
+csl: sports-medicine.csl
+---
+
+#### Affiliation
+
+¹ Human-Technology Interaction Group, Eindhoven University of Technology, Eindhoven, The Netherlands
+
+² School of Biological, Health and Sports Sciences, Technological University Dublin, Tallaght, Dublin, Ireland
+
+#### ORCIDs
+
+Cristian Mesquida – 0000-0002-1542-8355
+
+Jennifer Murphy – 0000-0001-8624-3828
+
+Joe Warne – 0000-0002-4359-8132
+
+Daniël Lakens – 0000-0002-0247-239X
+
+#### Correspondence
+
+Cristian Mesquida; Human-Technology Interaction Group, Eindhoven University of Technology, The Netherlands, c.mesquida.caldentey\@tue.nl
+
+\pagebreak
+
+```{r packages}
+#| echo: false
+#| message: false
+#| warning: false
+
+# Load packages
+library(here)
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+library(knitr)
+library(criticalESvalue)
+library(broom)
+library(pwr)
+library(here)
+library(ggplot2)
+```
+
+```{r data}
+#| echo: false
+#| warning: false
+#| message: false
+
+# Run script to load data
+source(here("r_scripts", "data_analysis", "02_clean_data.R"))
+```
+
+```{r prevalence}
+#| echo: false
+
+## Calculate percentage of studies reporting the use of a power analysis by category
+
+prevalence_power <- cleaned_data %>% 
+  group_by(power_analysis) %>%
+  summarise(n = n()) %>%
+  mutate(n = ifelse(power_analysis == "post-hoc", n + 2, n)) %>%
+  mutate(prop = round(n / sum(n) *100, 0))
+
+# Two studies included both an a priori and post hoc power analysis. 
+# This can be checked at raw_data.xlsx (see comments section)
+```
+
+```{r dv}
+#| echo: false
+
+dv <- cleaned_data %>% filter(power_analysis == "a priori") %>% group_by(specified_dv_power) %>% summarise(n = n()) %>% mutate(prop = round(n / sum(n)*100, 0))
+```
+
+```{r magnitude_es}
+#| echo: false 
+
+magnitude_es <- cleaned_data %>% 
+  filter(power_analysis == "a priori") %>% summarise(total = n(), 
+          reported = sum(!is.na(magnitude_es)),
+          prop = round(reported / total *100,0))
+```
+
+```{r family_test}
+#| echo: false
+
+family_test <- cleaned_data %>% 
+   filter(power_analysis == "a priori") %>%
+   mutate(test = case_when(
+     statistical_test_power %in% c("paired t-test", "unpaired t-test") ~ "t-test",
+     statistical_test_power == "not reported" ~ "not reported",
+     statistical_test_power == "unclear" ~ "unclear",
+     TRUE ~ 'F-test')) %>%
+  group_by(test) %>%
+  summarise(n = n()) %>%
+  mutate(prop = round(n/sum(n)*100, 0))
+```
+
+```{r sidedness}
+#| echo: false
+
+sidedness <- cleaned_data %>% 
+   filter(power_analysis == "a priori" & 
+          statistical_test_power %in% c("paired t-test", "unpaired t-test")) %>%
+  group_by(alpha_level) %>% 
+  summarise(n = n()) %>%
+  mutate(prop = round(n / sum(n)*100, 0))
+```
+
+```{r software}
+#| echo: false
+
+software <- cleaned_data %>% 
+   filter(power_analysis == "a priori") %>%
+   group_by(software) %>% 
+   summarise(n = n()) %>%
+   mutate(prop = round(n/sum(n)*100, 0))
+```
+
+```{r alpha}
+#| echo: false
+
+alpha <- cleaned_data %>% 
+   filter(power_analysis == "a priori") %>% 
+   mutate(alpha_level = case_when(alpha_level %in% c("assumed two-tailed at 0.05",
+                                                    "two-tailed at 0.05") ~ "0.05",
+                                 alpha_level %in% c("assumed two-tailed other",
+                                                    "two-tailed other") ~ "other",
+                                 TRUE ~ "not reported")) %>%
+   group_by(alpha_level) %>% 
+   summarise(n = n()) %>%
+   mutate(prop = round(n / sum(n)*100, 0))
+```
+
+```{r intended_power}
+#| echo: false
+
+intended_power <- cleaned_data %>% 
+   filter(power_analysis == "a priori") %>%
+  mutate(intended_power = case_when(intended_power == 0.8 ~ "0.8",
+                                    intended_power == "not reported" ~ "not reported",
+                                    intended_power %in% c(0.81, 0.85, 0.9, 0.95, 0.99) ~ "Other")) %>%
+  group_by(intended_power) %>% 
+  summarise(n = n()) %>%
+  ungroup() %>%
+  mutate(prop = round(n/sum(n)*100, 0))
+```
+
+```{r es_type}
+#| echo: false
+
+# Type of effect size
+type_es <- cleaned_data %>% 
+    filter(power_analysis == "a priori") %>% 
+    group_by(type_es) %>% summarise(n = n()) %>% 
+    mutate(prop = round(n / sum(n)*100, 0))
+```
+
+```{r es}
+#| echo: false
+
+# Type of standardized effect sizes
+es <- cleaned_data %>% 
+  filter(power_analysis == "a priori" & 
+           !is.na(magnitude_es) & 
+           type_es == "yes, standardised") %>% 
+  group_by(type_standardised_es) %>% 
+  summarise(n = n()) %>% 
+  mutate(prop = round(n / sum(n)*100, 0))
+```
+
+```{r type_cohen}
+#| echo: false
+
+# Type of Cohen's d
+es_d <- cleaned_data %>% 
+   filter(power_analysis == "a priori" & 
+            !is.na(magnitude_es) & 
+            type_es == "yes, standardised" &
+            type_standardised_es == "Cohen's d family") %>%
+   group_by(type_cohen) %>% 
+   summarise(n = n()) %>%
+   mutate(prop = round(n / sum(n)*100, 0))
+```
+
+```{r es_justification}
+#| echo: false
+
+# Types of effect size justification
+es_justification <- cleaned_data %>% 
+   filter(power_analysis == "a priori" & !is.na(magnitude_es)) %>%
+   select(es_justification) %>%
+   mutate(es_justification = 
+           case_when(es_justification %in% c("meta-analysis and previous studies",
+                                             "meta-analysis and previous study",
+                                             "previous studies",
+                                             "two meta-analyses") ~ "unclear",
+                     es_justification %in% c("methodological paper", 
+                                              "position statement", 
+                                              "systematic review") ~ "others",
+                     is.na(es_justification) ~ "not reported",
+                     TRUE ~ es_justification)) %>%
+  group_by(es_justification) %>%
+  summarise(n = n()) %>%
+  mutate(prop = round(n / sum(n)*100, 0)) %>%
+  arrange(desc(n))
+```
+
+```{r sample_previous_study}
+#| echo: false
+
+# Sample size of the study used as justification of the slected effect size
+sample_size <- cleaned_data %>%
+  select(sample_previous_study) %>%
+  filter(!is.na(sample_previous_study)) %>%
+  mutate(extracted_samples = stringr::str_extract_all(sample_previous_study, "\\d+")) %>% 
+  unnest(extracted_samples) %>%
+  mutate(extracted_samples = as.numeric(extracted_samples)) %>%
+  summarise(median = median(extracted_samples),
+            average = round(mean(extracted_samples), 0),
+            sd = round(sd(extracted_samples), 0),
+            maximum = max(extracted_samples),
+            minimum = min(extracted_samples))
+```
+
+```{r match_test}
+#| echo: false
+
+# Percentage of match between test reported in power analysis and in the analysis section
+match_test <- cleaned_data %>%
+  filter(power_analysis == "a priori") %>%
+  select(statistical_test_power, statistical_test_study) %>%
+  filter(!statistical_test_power %in% c("not reported", "unclear") &
+         statistical_test_study != "unclear") %>%
+  mutate(match = as.character(statistical_test_power) ==
+           as.character(statistical_test_study)) %>%
+  group_by(match) %>%
+  summarise(n = n(), .groups = "drop") %>% 
+  mutate(prop = round(n / sum(cleaned_data$power_analysis == "a priori")*100, 0))
+```
+
+```{r es_stats}
+#| echo: false
+#| warning: false
+
+# Execute this code to upload the the function descriptive_stats()
+source(here("r_scripts", "data_analysis", "03_descriptive_stats_function.R")) 
+source(here("r_scripts", "data_analysis", "02_clean_data.R")) 
+
+# Descriptive statistics of reported Cohen's d in a priori power analyses
+reported_cohen_d <- cleaned_data %>% 
+  filter(power_analysis == "a priori" &
+         type_standardised_es == "Cohen's d family" &
+         !is.na(magnitude_es)) %>% 
+  pull(magnitude_es) 
+
+gpower_cohen_d <- cleaned_data %>% 
+  filter(power_analysis == "a priori" &
+         type_es_in_gpower %in% c("Cohen's ds", "Cohen's dz") &
+         !is.na(magnitude_es_in_gpower)) %>% 
+  pull(magnitude_es_in_gpower)
+
+combined_cohen_d <- c(reported_cohen_d, gpower_cohen_d)
+
+cohen_d_stats <- descriptive_stats(combined_cohen_d)
+
+# # Descriptive statistics of reported Hedges' g in a priori power analyses
+hedges_g_stats <- cleaned_data %>%
+  filter(power_analysis == "a priori" & 
+         type_standardised_es == "Hedge's g family" &
+         !is.na(magnitude_es)) %>% 
+  pull(magnitude_es) %>% 
+  descriptive_stats()
+
+# # Descriptive statistics of reported Cohen's f in a priori power analyses
+reported_cohen_f <- cleaned_data %>%
+  filter(power_analysis == "a priori" & 
+         type_standardised_es == "Cohen's f" &
+         !is.na(magnitude_es)) %>% 
+  pull(magnitude_es) 
+
+gpower_cohen_f <- cleaned_data %>%
+  filter(power_analysis == "a priori" & 
+         type_es_in_gpower == "Cohen's f" &
+         !is.na(magnitude_es_in_gpower)) %>% 
+  pull(magnitude_es_in_gpower)
+
+combined_cohen_f <- c(reported_cohen_f, gpower_cohen_f)
+
+cohen_f_stats <- descriptive_stats(combined_cohen_f)
+
+# # Descriptive statistics of reported eta partial squared in a priori power analyses
+partial_eta_stats <- cleaned_data %>%
+  filter(power_analysis == "a priori" &
+         type_standardised_es == "eta partial squared (ηp^2)" &
+         !is.na(magnitude_es)) %>% 
+  pull(magnitude_es) %>% 
+  descriptive_stats()
+
+# # Descriptive statistics of reported eta square in a priori power analyses
+eta_stats <- cleaned_data %>%
+  filter(power_analysis == "a priori" & 
+         type_standardised_es == "eta squared (η^2)" &
+         !is.na(magnitude_es)) %>% 
+  pull(magnitude_es) %>% 
+  descriptive_stats()
+```
+
+```{r reproducibility}
+#| echo: false
+
+# Percentage of a priori power analyses declared fully non-reproducible
+fully_non_reproducible <- cleaned_data %>% 
+   filter(power_analysis == "a priori" & reproducibility == "fully non-reproducible") %>%
+   summarise(n = n()) %>%
+   mutate(prop = ceiling(n / base::sum(cleaned_data$power_analysis == "a priori")*100))
+
+# Percentage of reproducibility by type
+reproducible <- cleaned_data %>% 
+   filter(power_analysis == "a priori" & !reproducibility == "fully non-reproducible") %>%
+   group_by(reproducibility) %>%
+   summarise(n = n()) %>%
+   mutate(prop = round(n / base::sum(n)*100), 0)
+
+# Combination of a priori power analyses that were non-reproducible: fully non-reproducible and non-reproducible
+total_non_reproducible <- fully_non_reproducible[[1]] + reproducible[2, 2]
+```
+
+```{r sample_size_stats}
+#| echo: false
+
+# Descriptive stats of reported sample sizes in studies
+sample_size_stats <- data2 %>% 
+  select(study_sample) %>%
+  pull() %>% 
+  descriptive_stats() 
+```
+
+```{r poisson_assumption}
+#| echo: false
+#| message: false
+
+# Leave out studies where type of power analysis was unclear
+data_poisson <- data2 %>%
+  filter(!pre_p == "unclear")
+
+# Checking assumption of variance = mean
+assumption <- data_poisson %>% 
+  summarise(average = mean(study_sample),
+            variance = var(study_sample))
+
+# The variance is larger than the mean what indicates that there is overdispersion
+# Because under a Poisson model we would expect the means and variances of the 
+# response to be about the same in various groups, we need to adjust for overdispersion. 
+```
+
+```{r poisson_regression}
+#| echo: false
+#| message: false
+
+# Change level of reference to no a priori power analysis
+data_poisson$pre_p <- relevel(data_poisson$pre_p, ref = 2) 
+
+# Poisson regression
+poisson_model <- glm(study_sample ~ pre_p, 
+                       family = quasipoisson, 
+                       data = data_poisson) 
+
+poisson_tidy <- tidy(poisson_model)
+
+exp_coefficients <- exp(coef(poisson_model))
+exp_ci <- exp(confint(poisson_model))
+```
+
+```{r sample_descriptives}
+#| echo: false
+
+# Descriptive statistics of sample sizes for studies that reported an a priori power analysis and those that did not
+sample_descriptive <- data_poisson %>% 
+    group_by(pre_p) %>%
+    summarise(average = mean(study_sample),
+              sd = sd(study_sample))
+```
+
+```{r proportion}
+#| echo: false
+#| warning: false
+
+# Proportion of studies supporting the hypothesis with and without an a priori power analysis
+proportion <- data2 %>% 
+  filter(type_hypothesis == "effect") %>%
+  group_by(pre_p) %>%
+  summarise(support_h = sum(support_hypothesis == "yes"),
+            total = n())
+
+# Test for difference
+proportion_results <- prop.test(x = proportion$support_h,  
+                                n = proportion$total)
+
+proportion_tidy <- tidy(proportion_results)
+```
+
+```{r default_gpower}
+#| echo: false
+
+# Proportion of a priori power analyses that used G*Power's default option
+default <-  cleaned_data %>%
+   filter(power_analysis == "a priori") %>%
+   mutate(es = case_when(type_standardised_es %in% c("eta partial squared (ηp^2)",
+                                                     "eta squared (η^2)") ~ "eta",
+                                                     TRUE ~ type_standardised_es)) %>%
+   filter(es %in% c("Cohen's f", "eta")) %>%
+   filter(es_justification %in% c("previous study",
+                                  "previous studies",
+                                  "meta_analysis") & 
+          statistical_test_gpower %in% c("within-subject ANOVA",
+                                         "mixed ANOVA") &
+          reproducibility %in% c("reproducible",
+                                 "conditionally reproducible") &
+          software == "G*Power") %>%
+   summarise(total = length(gpower_default_option), 
+             yes_default = base::sum(gpower_default_option == "yes", na.rm = TRUE),
+             prop_yes_default = yes_default / total * 100)
+```
+
+```{r gpower}
+#| echo: false
+
+# Proportion of a priori power analyses using G*Power
+gpower <- cleaned_data %>%
+  filter(power_analysis == "a priori" & software == "G*Power") %>%
+  summarise(n = n()) %>%
+  mutate(prop = round((n / sum(cleaned_data$power_analysis == "a priori"))*100, 0))
+```
+
+```{r guesses}
+#| echo: false
+
+# Number of guessed parameters when a priori power analysis where "conditionally reproducible"
+guesses <- cleaned_data %>%
+   filter(power_analysis == "a priori" &
+          reproducibility == "conditionally reproducible") %>% 
+   group_by(guessed_parameters) %>%
+   summarise(n = n()) %>%
+   mutate(prop = round(n / base::sum(n) * 100,0)) %>%
+   arrange(desc(prop))
+```
+
+```{r unstand_es}
+#| echo: false
+
+# Proportion of unstandardised effect sizes that could be reproduced
+unstand_es <- cleaned_data %>% 
+  filter(power_analysis == "a priori") %>%
+  filter(type_es == "yes, unstandardised") %>%
+  group_by(reproducibility) %>%
+  summarise(n = n()) %>%
+  mutate(prop = n / base::sum(n)*100) %>%
+  arrange(desc(n))
+```
+
+#### Abstract
+
+The average statistical power of 269 studies published across 10 sports and exercise science journals has been reported to be only 11%. To ensure studies are designed with sufficient power to detect the effect size of interest, researchers should conduct an a priori power analysis. However, despite its importance, our analysis found that only `r prevalence_power[1, 3]`% (`r sum(cleaned_data$power_analysis=="a priori")`/`r nrow(data)`) of hypothesis-testing studies reported an a priori power analysis. Among these, `r fully_non_reproducible[[2]]`% (`r fully_non_reproducible[[1]]`/`r sum(cleaned_data$power_analysis=="a priori")`) were *fully non-reproducible* because the effect size and other information was missing. Of the remaining `r sum(cleaned_data$power_analysis=="a priori") - fully_non_reproducible[[1]]` analyses, `r reproducible[2, 3]`% (`r reproducible[2, 2]`) were *non-reproducible*, `r reproducible[3, 3]`% (`r reproducible[3, 2]`) were *reproducible* and `r reproducible[1, 3]`% (`r reproducible[1, 2]`) were deemed *conditionally reproducible*, which means they could be reproduced after making assumptions about the missing parameters. Among a priori power analyses that used a within-subject or mixed-design ANOVA and reported an effect size from a previous study, `r round(default[[3]], 0)`% (`r default[[2]]`/`r default[[1]]`) relied on the default effect size setting (“as in *G\*Power 3.0”),* which may result in underestimated sample sizes. Given G\*Power’s widespread use, this issue is likely more prevalent, but poor reporting practices prevented a full assessment of its scope. The inclusion of an a priori power analysis did not increase the sample size of studies, nor the proportion of supported hypotheses, suggesting that many a priori power analyses were poorly conducted. In conclusion, a priori power analyses in the reviewed studies were often incomplete, ambiguous, and computationally non-reproducible. Sports and exercise scientists should transparently report a priori power analyses with all necessary information to ensure computational reproducibility, preferably as part of a detailed preregistration. Crucially, these analyses should be conducted rigorously to ensure that studies are designed with adequate power, thereby reducing type II errors and yielding more informative results.
+
+#### Key points
+
+A priori power analyses were infrequently reported and largely non-reproducible in sports and exercise science studies, primarily due to missing or ambiguous reporting of key information.
+
+Reported a priori power analyses did not improve study design, as they often relied on default or unjustified effect sizes and were not associated with larger sample sizes or higher rates of supported hypotheses.
+
+\newpage
+
+## Introduction
+
+Sports and exercise scientists aiming to test hypotheses should conduct well-designed experiments that severely evaluate their predictions. This requires designing studies in a way that statistical tests have a high probability of supporting the hypothesis when it is true, (i.e., a low type II error rate, or a low probability of a false negative) and has a low probability of supporting the hypothesis when it is false (i.e., a low type I error rate, or a low probability of a false positive). In the Neyman-Pearson approach to NHST, severely testing a hypothesis requires setting the alpha level ($\alpha$) and planning a study to achieve a desired level of statistical power before data collection. Statistical power is the probability of observing a statistically significant test result, given a specific effect size, and it is determined by the study sample size, the effect size, the statistical test and $\alpha$ [@cohen1988]. It is therefore desirable to perform an a priori power analysis because it increases the informational value of studies [@cohen1988; @maxwell2004]. Low statistical power, combined with selection bias, increases the probability that a significant result in the published literature is a false positive. Therefore, conducting high-powered studies is a crucial step toward addressing the issue of low replicability in sport and exercise science [@murphy_replicability_2025].
+
+Despite the importance of statistical power, there are concerns that statistical power might be low [@mesquida2022; @Abt2020]. One solution to ensure studies are designed with adequate power to detect the effect of interest is through an a priori power analysis [@lakens_sequential_2014; @cohen1992]. An a priori power analysis should be performed before collecting data[,]{.underline} and it is used to estimate the required sample size to achieve a desired probability of observing a statistically significant effect, given a certain effect size of interest, statistical test[,]{.underline} and $\alpha$. Despite its importance, our review of 129 hypothesis-testing studies published in the *Journal of Sports Sciences* found that only 39 studies (30%) included an a priori power analysis [@mesquida_2023]. Similarly, Mckay et al. [-@mckay_low_power] reported that only 84 out of 635 (13%) studies published in motor behavior research conducted an a priori power analysis. The lack of a priori power analyses is especially concerning in fields where sample sizes are typically small, and the average power of studies is low, both of which are concerns in sports and exercise science [@Abt2020; @mckay_bias_2023; @mesquida_zcurve_2025]. However, the extent to which these results are representative of the entire field remains unknown. Assessing the prevalence of a priori power analysis could provide insight into why the sports and exercise science suffers from studies with underpowered designs.
+
+In fields such as sports and exercise science, where there are concerns that the typical sample size might be too small to detect the effects of interest [@mesquida2022; @Abt2020], studies that report an a priori power analysis should, in principle, have larger sample sizes (under the assumption that studies with or without a priori power analyses investigate effects of the same size). If this assumption holds, the widespread adoption of a priori power analyses should, on average, lead to a higher proportion of supported hypotheses, as the type II error is reduced. However, research indicates that studies reporting a priori power analyses do not necessarily lead to larger sample sizes [@bakker_2020; @mesquida_2023]. For instance, our analysis of studies published in the *Journal of Sports Sciences* found no significant difference in sample sizes between studies that reported an a priori power analysis and those that did not [@mesquida_2023]. The fact that reporting an a priori power analysis does not lead to larger sample sizes, particularly in a field where sample sizes are already small, raises concerns that these analyses may not be conducted following best practices. For example, researchers might opportunistically select an ‘expected’ sample size that yields the effect size they already wanted to collect, or that fits the sample size they deemed feasible. Whether our findings generalize beyond the *Journal of Sports Sciences* remains unknown.
+
+Another issue is that even when an a priori power analysis is reported, it is sometimes conducted incorrectly [@sample_size_bamba; @thibault2022; @thibault2024]. A notable example involves the widespread use of G\*Power software, where the default effect size specification for within-subject and mixed ANOVAs can lead to invalid power analyses if researchers enter $\eta_p^2$ values obtained from SPSS. The problem arises because SPSS uses a formula for $\eta_p^2$ that already incorporates the correlation between dependent measures, whereas G\*Power by default does not incorporate the correlation in the effect size. As a result, researchers may erroneously account for the correlation between the dependent measures twice, leading to an overestimated statistical power and an underestimated required sample size. Many researchers may be unaware of this error. By assessing the prevalence of this error, we hope to increase awareness and prevent its occurrence.
+
+It is also essential that all information used in the power analysis is transparently reported, so that peers can evaluate the methodological quality of said analysis. However, previous studies indicate that a priori power analyses are often not computationally reproducible due to poor reporting practices [@Abt2020; @mckay_repro_2023; @mesquida_2023; @thibault2024]. For example, our analysis of studies published in the *Journal of Sports Sciences* found that, even when a priori power analyses were reported, they frequently lacked sufficient details to assess computational reproducibility. This lack of transparency prevents peers from verifying whether power analyses were performed correctly. Although there is strong evidence that a priori power analyses are not reproducible in some journals and sub-fields, the generalizability of previous findings is unknown. Previous studies have been limited in scope [@Abt2020; @mesquida_2023]. Abt et al. [-@Abt2020] and Mesquida et al. [-@mesquida_2023] examined only one journal, while Mckay, Bacelar & Carter [-@mckay_repro_2023] targeted only motor behavior journals. As a result, it is unclear whether these reproducibility and methodological concerns extend to the entire field of sports and exercise science.
+
+Given the importance of conducting reproducible and valid a priori power analyses, we sought to generalize and extend previous research by examining the methodological quality of power analyses in `r nrow(data)` studies publsihed across ten sports science and exercise journals. Our goals were to 1) determine the proportion of studies that included an a priori power analysis; 2) assess the reporting practices of a priori power analyses; 3) assess the computational reproducibility of a priori power analyses; 4) examine whether sample sizes differed between studies that conducted an a priori power analysis and those that did not; 5) investigate whether the proportion of supported hypotheses differs between studies reporting an a priori power analysis and those that did not; and 6) estimate the prevalence of a priori power analyses that incorrectly used G\*Power’s default option for within-subject and mixed ANOVAs.
+
+## Methods
+
+This is a retrospective observational study. The preregistration of this study can be found at <https://doi.org/10.17605/OSF.IO/MQBR2>.
+
+### Deviations from preregistration
+
+First, instead of using a two-tailed independent samples Welch’s test to compare sample sizes between studies with and without an a priori power analysis, a Poisson regression with power analysis as a predictor was employed. We believe this deviation increases the validity of our test, as it was considered more valid given the sampling distribution of sample sizes [@lakens_deviations_2024]. The results of the Poisson regression did not differ from those of the Welch’s test, indicating this deviation did not impact the severity of our test. A second deviation was that when the statistical software was not reported, we attempted to reproduce the a priori power analysis using only G\*Power rather than G\*Power and R. This decision was based on our findings that 63% of a priori power analyses were conducted using G\*Power, 4% used other software (none of which was R) and 33% did not report the software used. Given these findings, we assumed that a priori power analysis statements missing the statistical software most likely used G\*Power. The third deviation was that in the preregistration, we stated that for reproducibility purposes, we would only attempt to reproduce a priori power analyses that reported an effect size, power and $\alpha$. However, a more lenient approach was taken as power and $\alpha$ are usually set to 0.8 and 0.05, respectively, without reporting these values explicitly. Therefore, we included a priori power analyses where researchers reported only the effect size, assuming a power of 0.8 and an $\alpha$ of 0.05. This approach enhances validity by incorporating a larger set of a priori power analyses without compromising severity, as restricting the analysis to the originally planned subset would not yield substantially different results. Our attempt to assess the prevalence of studies that used G\*Power’s default option to specify the effect size for within-subject and mixed-design ANOVAs was not preregistered, but added to this study after the publication of Thibault et al. [-@thibault2024], as we realized we could easily generalize their findings to a different research field based on the data we were coding.
+
+### Study sample size
+
+The primary goal of this study was to estimate the proportion of studies that report an a priori power analysis. To determine the required sample size for this estimation, we conducted a precision analysis. A precision analysis estimates the required number of studies to approximate the expected proportion of studies reporting an a priori power analysis within a desired margin of error. To date, two studies in sports and exercise science [@Abt2020; @mesquida_2023] and one in the field of motor behavior [@mckay_low_power] have reported that 10% [@Abt2020], 26% [@mesquida_2023] and 13% [@mckay_low_power] of studies included an a priori power analysis. Based on these findings­–and considering that the largest required sample size in a precision analysis occurs when the estimated proportion is closer to 50%, we conservatively estimated the true proportion of studies reporting an a priori power analysis to be 30%. A precision analysis follows the formula [@gelman2007, p. 442]:
+
+$$
+n = \left( \frac{z \sqrt{p(1 - p)}}{MOE} \right)^2 
+$$ {#eq-1.1}
+
+where $n$ is the required sample of studies, $p$ is the estimated proportion, MOE is the margin of error and $z$ is the critical value for a given CI. We deemed a margin of error of ± 5% as acceptable, as it would provide sufficient precision to determine whether the prevalence of a priori power analyses in the field, as we subjectively do not believe the field would respond differently to our findings if the true proportion was 5% smaller or larger than our estimates. Setting MOE = 0.05, $z$ = 1.96 (for a 95% CI) and $p$ = 0.30, @eq-1.1 returned a required sample size of 323 studies. We decided to round the sample size up to 350 (slightly improving the margin of error to 0.048­), as we planned to also code these papers for a planned $z$-curve analysis, which required approximately 350 observations. The R script used to conduct the precision analysis can be found at <https://doi.org/10.17605/OSF.IO/MQBR2>.
+
+### Journal and study selection protocol
+
+The `r nrow(data)` studies were sampled from 10 journals ranked in quartile 1 according to www.scimagojr.com (as of 13^th^ September 2022). The list of journals is shown in @fig-fig1.1. The study selection protocol was based on the *Selection Protocol for Replication in Sports and Exercise Science* [@murphy_2022], with two exceptions. First, while the *Selection Protocol for Replication in Sports and Exercise* only selected studies that reported a statistically significant main effect, we considered both statistically significant and non-significant effects. Second, we also considered interaction effects as opposed to the original selection protocol. We only considered applied sport and exercise science studies in the sub-disciplines of physiology, sports performance, physical activity, and injury prevention and psychology. By applied sport and exercise science studies, we refer to journals that publish studies examining changes in human performance in response to physical activity, exercise and sport. We excluded reviews (e.g., systematic, narrative, scoping and educational reviews), meta-analyses, consensus statements, opinion pieces, commentaries, editorials, case studies, conference proceedings, study protocols, perspectives, and methodological reports. Moreover, only confirmatory studies were considered. By confirmatory, we refer to any study that tests a hypothesis with an experimental or quasi-experimental design. A quasi-experimental design was defined as an empirical study used to estimate the causal impact of an independent variable on the target population without randomization. Furthermore, only studies that contained hypothesis tests such as the *t*-test and *F*-tests were included. For *F*-tests, both main effects and interaction effects were considered.
+
+```{r}
+#| echo: false
+#| label: fig-fig1.1
+#| fig-width: 10
+#| fig-height: 5
+#| fig-cap: "List of journals from which the 350 independent p-values were extracted, along with the number of studies sampled from each journal and the corresponding proportion."
+
+journals <- read_xlsx("../data/processed_data.xlsx")
+
+journal_summary <- journals %>%
+  rename(Journal = journal) %>%
+  count(Journal, name = "Number") %>%
+  mutate(
+    Proportion = Number / nrow(journals) * 100,
+    Label = paste0(round(Proportion, 0), "%")  # proportion as label
+  ) %>%
+  arrange(Number) %>%  # order from smallest → largest
+  mutate(Journal = factor(Journal, levels = Journal))
+
+# Create the horizontal bar plot
+ggplot(journal_summary, aes(x = Number, y = Journal)) +
+  geom_col(fill = "grey70") +
+  geom_text(
+    aes(label = Label),
+    hjust = -0.1,   # label just outside the bar
+    size = 4
+  ) +
+  labs(
+    x = "Number of studies",
+    y = NULL
+  ) +
+   scale_x_continuous(
+    limits = c(0, 50),        # set x-axis from 0 to 50
+    expand = c(0, 0)          # remove extra padding
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size = 10),
+    plot.margin = margin(5.5, 60, 5.5, 5.5)
+  )
+```
+
+### Procedures and data extraction
+
+CM sampled and downloaded `r nrow(data)` articles in PDF, which were then randomly allocated to the raters. The coding form included three overarching sections. We first assessed whether the study included a power analysis and if so, which type of power analysis was used, that is, a priori power analysis, sensitivity analysis, compromise analysis, conditional, or post hoc power analysis [@lakenssamplejustification]. To detect the use of any power analysis, the raters first searched for any mention or implicit suggestions of power reported within the methods and results section of a study. If the first strategy was unsuccessful, raters conducted a search by using keywords such as “power”, “sample”, “size” and “participants” or “subjects”. If studies reported an a priori power analysis, we continued extracting additional information using a coding form that can be found at <https://doi.org/10.17605/OSF.IO/MQBR2>. We coded whether the a priori power statement included a dependent variable and, if so, whether the dependent variable was reported specifically or whether researchers used an umbrella term. By umbrella, term we refer to dependent variables that can be operationalised in multiple ways. For instance, when an a priori power analysis refers to an effect size of ‘performance’, but performance is operationalised as maximal oxygen uptake, lactate threshold and time-trial performance. The more general the dependent variable is described, the more difficult it is to evaluate the justification for the effect size of interest, as there is considerable vagueness about the effect that the power analysis is based on. Third, we assessed the type of effect size reported for the power analysis, and the magnitude of the reported effect size. We first assessed whether the reported effect size was unstandardised or standardised. If standardised, we assessed its type – such as Cohen’s *d*, Hedges’ *g*, Cohen’s *f*, $\eta^2$ or $\eta_p^2$. We also coded the type of Cohen’s *d* and Hedges’ g when reported. If an effect size was reported, we also assessed the rationale for choosing such an effect size as the basis for the a priori power analysis—that is, whether the effect size was, for example, obtained from a previous study or a pilot study, a meta-analysis, based on a smallest effect size of interest, Cohen’s *d* benchmarks, or whether there was no justification for the effect size. If the reported effect size was justified based on a previous study, we further coded the sample size of the study from which the effect size was obtained. Fourth, we assessed whether the study transparently reported other key variables of the a priori power analysis, such as the intended power, computed sample size, the statistical test, $\alpha$, and the statistical software used. Fifth, we assessed whether the statistical test used in the a priori power analysis matched any of the statistical analyses actually reported in the article. Finally, we coded whether sampled studies supported or rejected the tested hypothesis based on the result of the hypothesis test.
+
+### Inter-rater reliability
+
+```{r intercoder_agreement}
+#| echo: false
+#| message: false
+
+# Run script to load data
+source(here("r_scripts", "intercoder_agreement", "03_intercoder_agreement.R"))
+```
+
+```{r average_fleiss}
+#| echo: false
+
+# Calculate average Fleiss' Kappa after excluding hypothesis_statement, statistical 
+# result, type effect, preregistration, public_data_repository and 
+# link_data_repository
+
+average_fleiss <- round(mean(agreement_3_coders[-c(15, 19:23), 2]), 2) 
+```
+
+```{r average_cohen}
+#| echo: false
+
+# Calculate average Cohen's Kappa after excluding hypothesis_statement, 
+# statistical result, type effect, preregistration, public_data_repository and 
+# link_data_repository
+
+average_cohen <- round(mean(agreement_2_coders[-c(15, 19), 2]), 2)
+```
+
+Prior to collecting any data, and in anticipation of difficulties recording the key information, such as the dependent variable, the justification of the effect size and the statistical test, we developed a coding strategy in a 4-step process. First, the four authors (CM, JM, DL and JW) developed and discussed the coding form created by CM. Ambiguities in the coding form were discussed and amendments were made. Second, three raters (CM, JM and JW) independently coded a randomly selected subset of 28 studies from the sample pool of studies (`r nrow(data)`) as a pilot study. Subsequently, raters’ responses were compared, and any disagreement was discussed and used to improve the clarity of the coding form. Disagreements arose due to ambiguities in how a priori power analyses reported information. To minimize these disagreements, we refined our coding strategy. First, when a priori power analyses included statements like *“a medium effect size of 0.5 was used to estimate the sample size”* without specifying the type of effect size or its rationale, we assumed it referred to Cohen’s *d*, although we made no assumptions about the specific type of Cohen’s *d*. Second, if an omnibus test (e.g., ANOVA) was reported without specifying the number of factors (e.g., one-way ANOVA), we coded it as *“unclear”.* Third, the same three raters (CM, JM and JW) independently coded a second random subset of 19 studies. Inter-rater reliability was assessed by calculating a pooled Fleiss’ Kappa estimate for each coding category across the 47 studies coded in the first two rounds of coding. The mean inter-rater agreement for the categorical/numeric responses was `r average_fleiss`, indicating substantial agreement. The second round of coding was also used to discuss disagreements. The remaining 303 studies were double-coded, whereby both JM and JW each coded \~176 studies and CM coded the full sample of studies (`r nrow(data)`). Inter-rater agreement was assessed by calculating a pooled Cohen’s Kappa estimate. The inter-rater agreement for the final round of coding was `r average_cohen`, indicating almost perfect agreement. Inter-rater agreements across categorical/numeric variables can be found at <https://doi.org/10.17605/OSF.IO/MQBR2>. After termination of data collection, any discrepancies in coding decisions were resolved through discussions between the two pairs of raters. When discrepancies arose and agreement between two raters could not be reached, a final coding decision was reached in discussion with DL.
+
+### Reproducibility of a priori power analyses
+
+We attempted to reproduce all reported a priori power analyses that specified at least the effect size. A priori power analyses that did not report an effect size were deemed as *fully non-reproducible.* If studies reported an unstandardised effect, we tried to reproduce the a priori power analysis if a mean difference and standard deviation were reported. Otherwise, a priori power analyses were recorded as *fully non-reproducible.* An a priori power analysis was deemed as *reproducible* if the sample size from the a priori power analysis in the article could be confirmed using the reported parameters; otherwise, it was deemed as *non-reproducible*. If insufficient parameters were reported, we attempted to reproduce the power analysis by making assumptions about missing parameters. For example, we expected that most studies using factorial designs would not explicitly report the number of groups or measurements or the correlation between measurements as input parameters required to reproduce the a priori power analysis. If the number of groups or measurements was not reported, we attempted to infer it from the information reported in the study or the study design. For the correlation between measurements, we used G\*Power’s default option. If unsuccessful, the correlation was increased by 0.1 up to 1. If the statistical analysis was not reported, we tried to infer the key statistical test given the tested hypothesis and the study design. All plausible analyses were attempted, but effect sizes were not guessed. Studies that could be reproduced by assuming parameters were recorded as *conditionally reproducible*; otherwise, they were considered *non-reproducible*. For within-subject and mixed factorial designs, we first attempted to reproduce a priori power analyses with G\*Power’s default option for the specification of the effect size (“as in G\*Power 3.0”). If the first attempt did not reproduce the reported sample size, we changed the default option to “as in SPSS”. We only attempted to reproduce a priori power analyses that were conducted with G\*Power (version 3.1.9.6). This analysis was primarily conducted by CM, and any originally non-reproducible a priori power analysis was also conducted by JW to verify agreement with CM’s decision.
+
+### Statistical analysis
+
+Percentages were calculated for the proportion of studies that included an a priori power analysis and for the parameters assessed as part of the reporting practices. Additionally, means and standard deviations were calculated for sample size and effect sizes. A two-sided two-proportion $z$-test was performed to test whether studies with an a priori power analysis were more or less likely to support the tested hypothesis. A Poisson simple regression with power analysis as a predictor was used to examine whether studies that performed an a priori power analysis had different sample sizes compared to studies without an a priori power analysis. $\alpha$ was set to 0.05. Data and analysis scripts related to this study are publicly available on the Open Science Framework and it can be found at <https://doi.org/10.17605/OSF.IO/MQBR2>.
+
+### Software
+
+Data analyses were conducted using R (`r version$version.string`; @Rcoreteam). The manuscript was prepared using *Quarto* [@quarto]. Analyses and manuscript generation relied on several R packages, including *broom* [@broom_pkg], *criticalESvalue* [@criticalES_pkg], *dplyr* [@dplyr_pkg], *ggplot2* [@ggplot2], *here* [@here_pkg], *irr* [@irr], *kableExtra* [@kableExtra_pkg], *knitr* [@knitr_pkg], *pwr* [@pwr_pkg], *readxl* [@readxl] and *tidyr* [@tidyr_pkg].
+
+## Results
+
+### Prevalence of a priori power analysis
+
+In our sample of `r nrow(data)` studies, `r  prevalence_power[2,3]`% (`r prevalence_power[2,2]`/ `r nrow(data)`) did not use an a priori power analysis, `r  prevalence_power[1,3]`% (`r prevalence_power[1,2]`/ `r nrow(data)`) reported an a priori power analysis, `r  prevalence_power[4,3]`% (`r  prevalence_power[4,2]`/`r nrow(data)`) reported a sensitivity analysis, `r  prevalence_power[3,3]`% (`r  prevalence_power[3,2]`/`r nrow(data)`) reported a post hoc power analysis and for `r  prevalence_power[5,3]`% (`r  prevalence_power[5,2]`/`r nrow(data)`) of studies we were unsure about the type of power analysis used.
+
+### Reporting practices of a priori power analyses
+
+@tbl-tbl1.1 presents the frequency of reporting practices in studies reporting an a priori power analysis. The results indicate that most studies did not report all components required to enable a comprehensive assessment of the a priori power analysis. Among a priori power analyses reporting a standardised effect size (`r type_es[2, 3]`%; `r type_es[2, 2]`/`r prevalence_power[1, 2]`), `r es[1, 3]`% (`r es[1, 2]`/`r type_es[2, 2]`) used Cohen’s *d*, `r es[2, 3]`% (`r es[2, 2]`/`r type_es[2, 2]`) used Cohen's *f*, `r es[3, 3]`% (`r es[3, 2]`/`r type_es[2, 2]`) used $\eta_p^2$, `r es[4, 3]`% (`r es[4, 2]`/`r type_es[2, 2]`) used $\eta^2$, `r es[5, 3]`% (`r es[5, 2]`/`r type_es[2, 2]`) used Hedges' *g* and `r es[6, 3]`% (`r es[6, 2]`/`r type_es[2, 2]`) did not specify the type of effect size.
+
+Of the a priori power analyses that reported Cohen’s *d*, `r es_d[1, 3]`% (`r es_d[1, 2]`/`r es[1, 3]`) corresponded to Cohen’s *d~s~*, `r es_d[2, 3]`% (`r es_d[2, 2]`/`r es[1, 3]`) corresponded to Cohen’s *d*~z~ and `r es_d[3, 3]`% (`r es_d[3, 2]`/`r es[1, 3]`) did not specify the type of Cohen’s *d*. The only study reporting a Hedges’ *g* did not specify its type.
+
+| Items | Prevalence ($n$) |
+|------------------------------------|------------------------------------|
+| Primary outcome |  |
+| Specific primary outcome | `r paste0(dv[3,3], "%", " (", dv[3,2], ")")` |
+| Umbrella term | `r paste0(dv[4,3], "%", " (", dv[4,2], ")")` |
+| Unclear | `r paste0(dv[2,3], "%", " (", dv[2,2], ")")` |
+| Not reported | `r paste0(dv[1,3], "%", " (", dv[1,2], ")")` |
+| ES type |  |
+| Unstandardised | `r paste0(type_es[3,3], "%", " (", type_es[3,2], ")")` |
+| Standardised | `r paste0(type_es[2,3], "%", " (", type_es[2,2], ")")` |
+| Not reported | `r paste0(type_es[1,3], "%", " (", type_es[1,2], ")")` |
+| ES magnitude | `r paste0(magnitude_es[1,3], "%", " (", magnitude_es[1,2], ")")` |
+| Statistical test |  |
+| *t*-test | `r paste0(family_test[3,3], "%", " (", family_test[3,2], ")")` |
+| *F*-test | `r paste0(family_test[1,3], "%", " (", family_test[1,2], ")")` |
+| Unclear | `r paste0(family_test[4,3], "%", " (", family_test[4,2], ")")` |
+| Not reported | `r paste0(family_test[2,3], "%", " (", family_test[2,2], ")")` |
+| Sidedness of the test |  |
+| Two-sided | `r paste0(sidedness[2,3], "%", " (", sidedness[2,2], ")")` |
+| Not reported | `r paste0(sidedness[1,3], "%", " (", sidedness[1,2], ")")` |
+| $\alpha$ level |  |
+| 0.05 | `r paste0(alpha[1,3], "%", " (", alpha[1,2], ")")` |
+| Other | `r paste0(alpha[3,3], "%", " (", alpha[3,2], ")")` |
+| Not reported | `r paste0(alpha[2,3], "%", " (", alpha[2,2], ")")` |
+| Intended Power |  |
+| 80% | `r paste0(intended_power[1,3], "%", " (", intended_power[1,2], ")")` |
+| Other | `r paste0(intended_power[2,3], "%", " (", intended_power[2,2], ")")` |
+| Not reported | `r paste0(intended_power[3,3], "%", " (", intended_power[3,2], ")")` |
+| Software |  |
+| G\*Power | `r paste0(software[1,3], "%", " (", software[1,2], ")")` |
+| Other | `r paste0(software[2,3], "%", " (", software[2,2], ")")` |
+| Not reported | `r paste0(software[3,3], "%", " (", software[3,2], ")")` |
+
+: Descriptive of all components assessed to evaluate reporting practices of a priori power analyses. {#tbl-tbl1.1}
+
+ES = effect size
+
+@tbl-tbl1.2 summarizes the reported justifications for effect sizes used in a priori power analyses. The most common justification was based on a previous study (`r es_justification[1, 3]`%; `r es_justification[1, 2]`/`r sum(es_justification[,2])`), followed by cases where no justification was reported (`r es_justification[2, 3]`%; `r es_justification[2, 2]`/`r sum(es_justification[,2])`), Cohen’s *d* thresholds (`r es_justification[4, 3]`%; `r es_justification[4, 2]`/`r sum(es_justification[,2])`), meta-analysis (`r es_justification[5, 3]`%; `r es_justification[5, 2]`/`r sum(es_justification[,2])`) and pilot study (`r es_justification[6, 3]`%; `r es_justification[6, 2]`/`r sum(es_justification[,2])`). “Others” includes justifications based on methodological papers, position statements or systematic reviews, while cases where multiple studies, including meta-analyses, were cited are categorized as “unclear”. Despite being considered best practice [@lakenssamplejustification], only one of the analyses justified their choice based on the smallest effect size of interest.
+
+```{r}
+#| echo: false
+#| label: tbl-tbl1.2
+#| tbl-cap: "Justifications for effect sizes reported in a priori power analyses."
+
+es_justification %>%
+  mutate(merged = paste0(prop, "%", " (", n, ")")) %>% 
+  select(es_justification, merged) %>% 
+  kable(col.names = c("ES Justification", "Prevalence ($n$)"), 
+        align = c("l", "l"))
+```
+
+SESOI = smallest effect size of interest
+
+### Other descriptive results
+
+As part of our coding scheme, we also recorded whether the statistical test reported in the a priori power analysis matched any statistical test reported in the article, the magnitude of the effect size reported in a priori power analyses and the sample size of the studies used to justify these effect sizes. When the rationale for selecting an effect size was based on a previous study, the average sample size ± SD was `r sample_size[[2]]` ± `r sample_size[[3]]` (median = `r sample_size[[1]]`; range = `r sample_size[[5]]` – `r sample_size[[4]]`).
+
+Only `r match_test[2, 3]`% (`r match_test[2, 3]`/`r sum(cleaned_data$power_analysis == "a priori")`) of a priori power analyses reported a statistical test in the methods section that broadly matched the one mentioned in the sample size calculation. This is problematic as it indicates a possible mismatch between the power computing in the a priori power analysis, and the actual power for the reported analyses.
+
+The distributions of effect sizes reported in a priori power analyses are shown in @fig-fig1.2. For a priori power analyses reporting Cohen’s *d,* the mean ± SD was `r round(cohen_d_stats[[1]], 2)` ± `r round(cohen_d_stats[[3]], 2)` (median = `r round(cohen_d_stats[[2]], 2)`; range = `r round(cohen_d_stats[[4]], 2)` – `r round(cohen_d_stats[[5]], 2)`). Notably, `r sum(combined_cohen_d == 0.5)` of these a priori power analyses used a Cohen’s *d* of 0.5, which corresponds to a ‘medium’ effect size, which is the default option in G\*Power when selecting a *t*-test for the a priori power analysis. For a priori power analyses reporting Cohen’s *f*, `r round(cohen_f_stats[[1]], 2)` ± `r round(cohen_f_stats[[3]], 2)` (median = `r round(cohen_f_stats[[2]], 2)`; range = `r round(cohen_f_stats[[4]], 2)` – `r round(cohen_f_stats[[5]], 2)`). Among these, `r sum(combined_cohen_f == 0.25)` used a Cohen’s *f* of 0.25, which again is a ‘medium’ effect size, and the default option in G\*Power when selecting an *F*-test for the a priori power analysis. For a priori power analyses using $\eta_p^2$*,* the mean ± SD was `r round(partial_eta_stats[[1]], 2)` ± `r round(partial_eta_stats[[3]], 2)` (median = `r round(partial_eta_stats[[2]], 2)`; range = `r round(partial_eta_stats[[4]], 2)` – `r round(partial_eta_stats[[5]], 2)`). For a priori power analyses that used $\eta^2$*,* the mean ± SD was `r round(eta_stats[[1]], 2)` ± `r round(eta_stats[[3]], 2)` (median = `r round(eta_stats[[2]], 2)`; range = `r round(eta_stats[[4]], 2)` – `r round(eta_stats[[5]], 2)`).
+
+@fig-fig1.2 illustrates that some a priori power analyses report extremely large effect sizes. For instance, the largest Cohen’s *d* effect size (3.18) corresponds to the effect of all-out Wingate efforts on changes in power output. While the effect size is plausible, since a large decrease in power output during a Wingate test is expected, this effect actually does not correspond at all to the effect of hypoxia on power output that authors aimed to determine. Assessing the effect of hypoxia requires comparing hypoxic and normoxic conditions or assessing the interaction effect, for which a much smaller effect should be expected than the effect of all-out effort during a Wingate test (see Appendix for a more extensive explanation). Therefore, researchers should consult experts with relevant knowledge to properly interpret effect sizes, and future research must examine the validity of the effect sizes used in a priori power analyses.
+
+```{r}
+#| echo: false
+#| label: fig-fig1.2
+#| fig-cap: "Distributions of effect sizes reported in a priori power analyses categorized by type of effect size and effect size justification. The accompanying boxplot visually represents the range, interquartile range and median of the reported effect sizes."
+
+include_graphics(here("figures/es_distribution.pdf"))
+```
+
+### Reproducibility of a priori power analyses
+
+Estimates of the proportion of a priori power analyses that are computationally reproducible are provided in @fig-fig1.3. To simplify interpretation, a priori power analyses originally coded as *fully non-reproducible* and *non-reproducible* have been merged into a single category labeled *non-reproducible*. `r fully_non_reproducible[[2]]`% (`r fully_non_reproducible[[1]]`/`r sum(cleaned_data$power_analysis == "a priori")`) of a priori power analyses were classified as *fully non-reproducible* because they did not include an effect size. We attempted to reproduce the remaining `r 100-fully_non_reproducible[[2]]`% (`r sum(cleaned_data$power_analysis == "a priori") - fully_non_reproducible[[1]]`/`r sum(cleaned_data$power_analysis == "a priori")`) of a priori power analysis. Among these `r sum(cleaned_data$power_analysis == "a priori") - fully_non_reproducible[[1]]` analyses, `r round(reproducible[2, 3], 0)`% (`r reproducible[2, 2]`/`r sum(reproducible[, 2])`) were classified as *non-reproducible*. Of the `r sum(cleaned_data$power_analysis == "a priori") - fully_non_reproducible[[1]]` assessed for reproducibility, `r round(reproducible[3,3], 0)`% (`r reproducible[3,2]`/`r sum(reproducible[,2])`) were *reproducible*, while `r ceiling(reproducible[1,3])`% (`r reproducible[1,2]`/`r sum(reproducible[,2])`) were *conditionally reproducible*, which means they could be reproduced after making assumptions about the missing parameters. Of the `r reproducible[1,2]` classified as *conditionally reproducible*, `r round(sum(guesses[-1, 2])*100/reproducible[1, 2], 0)`% (`r sum(guesses[-1, 2])`/`r reproducible[1,2]`) required making only one assumption about the statistical test (`r guesses[2, 3]`%; `r guesses[2, 2]`/`r reproducible[1,2]`), the correlation (`r guesses[3, 3]`%; `r guesses[3, 2]`/`r reproducible[1,2]`), the $\alpha$ level (`r guesses[4, 3]`% (`r guesses[4, 2]`/`r reproducible[1,2]`), the number of groups/measurements (`r guesses[5, 3]`%; `r guesses[5, 2]`/`r reproducible[1,2]`), or the effect size type (`r guesses[6, 3]`%; `r guesses[6, 2]`/`r reproducible[1,2]`). Among those that were conditionally reproducible, `r guesses[1, 3]`% (`r guesses[1, 2]`/`r reproducible[1,2]`) required making multiple assumptions.
+
+```{r}
+#| echo: false
+#| label: fig-fig1.3
+#| fig-cap: "Level of computational reproducibility achieved in the sample of 144 a priori power analyses."
+
+include_graphics(here("figures/reproducibility.pdf"))
+```
+
+### Difference in sample sizes and proportion of supported hypotheses between studies that included an a priori power analysis and those which did
+
+Two of the aims of this study were to examine whether the inclusion of an a priori power analysis leads to significantly larger sample sizes and a higher proportion of supported hypotheses. The average sample size ± SD of `r nrow(cleaned_data)` studies was `r round(sample_size_stats[[1]], 0)` ± `r round(sample_size_stats[[3]], 0)` (median = `r round(sample_size_stats[[3]], 0)`, range = `r round(sample_size_stats[[3]], 0)` – `r round(sample_size_stats[[5]], )`). Studies that reported an a priori power analysis had an average sample size of `r round(sample_descriptive[2, 2], 0)` ± `r round(sample_descriptive[2, 3], 0)`, whereas studies that did not report an a priori power analysis had an average sample size of `r round(sample_descriptive[1, 2], 0)` ± `r round(sample_descriptive[1, 3], 0)`. A Poisson regression analysis showed that there was no statistically significant difference in the sample sizes depending on the presence of an a priori power analysis or its absence (95% CI of the mean difference \[`r round(exp_ci[2, 1], 0)`; `r round(exp_ci[2, 2], 0)`\]; *p* = `r round(poisson_tidy$p.value[2], 2)`).
+
+We tested whether the proportion of supported hypotheses differed between studies that included an a priori power analysis and those that did not. Among studies that included an a priori power analyses, `r round(proportion_tidy$estimate1*100, 0)`% (`r proportion[1,2]`/`r proportion[1,3]`) reported a significant result in support of the tested hypothesis (i.e., rejected $H_0$). For the studies that did not report an a priori power analysis `r round(proportion_tidy$estimate2*100, 0)`% (`r proportion[2,2]`/`r proportion[2,3]`) of the studies reported a significant result in support of the tested hypothesis. A two-sided two-proportion $z$-test indicated that the difference between these two proportions was not statistically significant ($\chi^2$ = `r round(proportion_tidy$statistic, 2)`, 95% CI of the proportion difference \[`r round(proportion_tidy$conf.low, 2)`; `r round(proportion_tidy$conf.high, 2)`\], *p* = `r round(proportion_tidy$p.value, 2)`). Therefore, we cannot conclude that the presence of an a priori power analysis led to larger sample sizes and a higher proportion of supported hypotheses.
+
+### Prevalence of the use of G\*Power’s default option for mixed-design ANOVAs
+
+Among the a priori power analyses that were deemed as *conditionally reproduced* or *reproduced*, `r default[[1]]` reported a within-subject or mixed ANOVA, specified a Cohen’s *f* or $\eta_p^2$ obtained from a previous study, and used G\*Power. Of those, `r round(default[[3]], 0)`% (`r default[[2]]`/`r default[[1]]`) incorrectly selected the default option (i.e., “as in G\*Power 3.0”), and only `r round(100 - default[[3]], 0)`% (`r default[[1]] - default[[2]]`/`r default[[1]]`) selected the correct non-default option “as in SSPS”. We were unable to assess the prevalence of this practice in the full sample of studies employing a priori power analyses, even though `r gpower[1, 2]`% (`r gpower[1, 1]`/`r sum(cleaned_data$power_analysis == "a priori")`) of the studies reported using G\*Power as the statistical software and that 20% (29/144) of a priori power analyses explicitly reported a within-subject or mixed ANOVA, due to the omission of key information. Using the default option could be problematic when researchers input $\eta_p^2$ from a previous study that was calculated using SSPS to conduct an a priori power analysis for a within-subject or mixed ANOVA. If researchers do not change G\*Power’s default effect size specification to “as in SPSS”, G\*Power will double-count the correlation between measurements, resulting a sample size smaller than required. @fig-fig1.4 depicts the hypothetical scenario where a researcher uses $\eta_p^2$ = 0.15 into G\*Power for a 2-way mixed ANOVA with statistical power = 0.8 and $\alpha$ = 0.05, while using the default effect size specification (“as in G\*Power 3.0”) produces a sample size of 14. However, correctly selecting “as in SSPS” under the same conditions yields a sample size of 50. Given the frequency of this error and its impact on the achieved power, the field should become more aware of this mistake [see @thibault2024].
+
+```{r}
+#| echo: false
+#| label: fig-fig1.4
+#| out.width: "100%"  
+#| out.height: "40%"
+#| fig-cap: 'The left-hand screenshot of G\*Power’s interface when using “as in G\*Power 3.0”, while the right-hand screenshot shows the result for the same power analysis using the “as in SPSS” option.'
+
+include_graphics(here("figures/gpower.png"))
+```
+
+## Discussion
+
+This section is divided into four parts. First, we briefly discuss the importance of conducting an a priori power analysis and how it differs from other types of power analyses. Second, we emphasise the importance of transparency when reporting a priori power analyses and provide examples to illustrate this point. Third, we discuss the benefits of using the smallest effect size of interest (SESOI) approach to justify the effect size, offering two specific examples from sports and exercise science, and discuss the limitations of alternative but more commonly used approaches. Finally, we discuss why the inclusion of an a priori power analysis did not lead to larger sample sizes and a higher proportion of supported hypotheses.
+
+### A priori power analyses
+
+The primary objective of this study was to assess the prevalence of a priori power analyses across sports and exercise science journals. We found that `r round((sum(cleaned_data$power_analysis == "a priori")*100)/nrow(cleaned_data), 0)`% (`r sum(cleaned_data$power_analysis == "a priori")` out of `r nrow(cleaned_data)` of hypothesis-testing studies reported conducting an a priori power analysis. Given the concerns regarding the use of small samples and lack of adequate power [@Abt2020; @mesquida2022], sports and exercise science must increasingly implement a priori power analyses when testing their hypotheses. This shift is crucial for designing more informative studies, which will contribute to improving the informational value of individual studies and the replicability of sports and exercise science [@maxwell2008; @lakenssamplejustification].
+
+It is important to distinguish between an a priori power analysis and a sensitivity analysis, as they serve different inferential purposes. An a priori power analysis estimates the sample size required to achieve a specified level of power given an expected effect size and $\alpha$. In contrast, a sensitivity analysis determines the smallest effect size that can be detected with a desired level of power given a sample size and $\alpha$. Sensitivity analysis is particularly useful when researchers face resource constraints that limit the sample size they can collect, or when the sample size is fixed (e.g., when re-analyzing existing data sets). In this case, a sensitivity analysis can help to evaluate whether study design had sufficient power for effect sizes considered to be of practical interest.
+
+Despite their different goals, sometimes it was difficult to tell whether an a priori power analysis or a sensitivity analysis was performed. For example, one study reported: “*The required sample size was determined on the basis of the differences in aerobic exercise capacity in COVID-19 patients’ post-hospital discharge compared to comorbidity-matched controls \[citation\]. Effect sizes of d = 0.998 in aerobic exercise capacity can be identified with 16 participants per group, assuming an alpha error of* $\alpha$ *= 5% and power of 95%. Expecting a maximum loss of follow-up of 20%, we recruited 19 participants per group (n = 38).*”. While the authors initially stated that the sample size was determined based on an expected effect (which aligns with an a priori power analysis), they later state that an effect size *d* = 0.998 can be detected with given a specific sample size, which is characteristic of sensitivity analysis. Although it is possible that this was intended as an a priori power analysis, we were unable to identify or reproduce Cohen’s *d* of 0.998 using data from the original study. To enhance transparency, researchers should clearly state the type of power analysis conducted, explicitly indicating whether it was an a priori power analysis or a sensitivity power analysis.
+
+Finally, researchers should avoid conducting post hoc power analyses using the effect size they observed based on the data they collected in the study [@yuan_posthoc]. After a hypothesis test, estimating power based on the study sample size and observed effect size is meaningless because the power estimate is a monotonic function of the *p*-value [@lakenssamplejustification]. As a result, post hoc power analyses provide no new information if the *p*-value is already known. When results are non-significant, observed power will be low (e.g., for an independent *t*-test, power will always be less than 50%). These limitations render post hoc power analyses uninformative. If researchers want to interpret non-significant results, instead of performing a post hoc power analysis researchers should interpret non-significant results using equivalence tests [@lakens_equivalence_2017].
+
+### Computational reproducibility
+
+Researchers should report all required information as it ensures computationally reproducibility and enables peers to evaluate whether an appropriate a priori power analysis has been performed. A lack of transparency hinders the detection of errors that can compromise the validity of a priori power analyses. To facilitate reproducibility, researchers should report: (1) the dependent variable central to the tested hypothesis, (2) the size of the effect entered in the a priori power analysis, (3) the type of effect size, (4) the specific statistical test performed and (5) the statistical software used to perform the analysis.
+
+First, the omission of the dependent variable would not be problematic if studies tested only one hypothesis that predicted the effect of a treatment or intervention on one dependent variable. However, in practice, studies often test multiple hypotheses, and very often multiple outcome measures are collected. Although it is not required for the reproducibility of the power analysis, the specification of the dependent variable, along with the specification of the effect size clarifies for which hypothesis test the power analysis is performed for, and allows peers to evaluate whether the study has achieved sufficient power for the primary test(s). In the case of multiple hypothesis tests, the most conservative (i.e., largest) sample size from all a priori power analyses should be used. Second, the magnitude of effect size should be specified. This is important because the effect size is one of the key factors that determine the sample size needed to achieve the desired level of power. Omitting the magnitude of the effect size not only limits the ability to reproduce the power analysis but also prevents peers from evaluating whether the selected effect size is well justified and whether the study has high informational value for an effect of interest.
+
+Second, researchers should specify the type of effect size used in the statistical software tool for several reasons. First, `r round((sum(unstand_es[, 2])*100) / sum(cleaned_data$power_analysis == "a priori"), 0)`% (`r sum(unstand_es[, 2])`/`r sum(cleaned_data$power_analysis == "a priori")`) of a priori power analyses reported an unstandardised effect size, but only `r round(unstand_es[3, 3], 0)` (`r round(unstand_es[3, 2], 0)`/`r sum(unstand_es[, 2])`) of these could be reproduced. Such unstandardised effect sizes could not be converted into standardised effect sizes due to missing details, such as the standard deviations and the formula used. Since G\*Power requires a standardised effect size, it is crucial for researchers to report not only the type of effect size (e.g., Cohen’s *d~s~* ~or~ Cohen’s *d~z~*) but also the necessary information to recompute it. Although the lack of reproducibility may be due to missing details, specifying this information is essential for transparency and reproducibility.
+
+Third, G\*Power requires different effect sizes depending on the study design: Cohen’s *d*~z~ for within-subject designs, *d*~s~ for between-subject designs and *f* for factorial designs. However, these effect sizes are not always reported in a previous study, requiring sports scientists to apply transformations to use them in their a priori power analysis [@brysbaert_guidelines]. Researchers should be careful when using effect sizes from a previous study, as they may not align with the design of their own study, potentially leading to incorrect a priori power analyses. For example, sports scientists often mistakenly use a Cohen’s *d* from a previous study to conduct an a priori power analysis for an interaction effect [@brysbaert_guidelines]*.* A Cohen’s *d* will only be equivalent to a Cohen’s *f* when the interaction corresponds to a crossover interaction, which is an unlikely scenario. When the interaction is attenuated or fully attenuated, the actual effect size will be much smaller, potentially leading to an underpowered design [@langenberg_tutorial; @sommet2023]. Readers are referred to the Appendix for an explanation on how the type of interaction determines the interaction size effect and, consequently, whether a Cohen’s *d* can appropriately be used as a Cohen’s *f.* Furthermore, sports scientists not only need to consider the type of interaction, but also the study design of the previous study. This is because converting a Cohen’s *d* from a between-subject design to a Cohen’s *f* requires dividing Cohen’s *d* by 2 [@brysbaert_guidelines; @superpower_2021].
+
+Fourth, while G\*Power can calculate Cohen’s *f* from $\eta_p^2$, this effect size is often not reported, meaning researchers may need to calculate it themselves [@lakens_calculating_es; @perugini_guidelines]. Thus, researchers should transparently report how Cohen’s *f* was calculated by providing the exact formula (or citing the page and formula number in a textbook). As an example, imagine a previous study that employed a two-way within-subject ANOVA but did not report the effect size for the main effect of interest. As long as the study has two numerator degrees of freedom and reports the degrees of freedom and the *F*-statistic, $\eta_p^2$ can be computed as follows [@lakens_calculating_es]:
+
+$$
+\eta_p^2 = \frac{F \times df_1}{F \times df_1 + df_2}
+$$ {#eq-eq1.2}
+
+In such a case, we could report the following: “*The required sample size was based on an a priori power analysis for a within-subject ANOVA with two groups to detect an effect size f = 0.37. We used a previous study (citation) to justify our effect size. Because the study did not report, we used equation (13) in Lakens [-@lakens_calculating_es] to compute* $\eta_p^2$*. Thus, using a F-ratio = 5, df~1~ = 1 and df~2~ = 38, equation (13) returned a* $\eta_p^2$ *= 0.12 which was transformed into an effect size f = 0.37 using G\*Power.”* In short, researchers should not only specify the type of effect size used in the a priori power analysis, but also transparently report how it was derived, especially when effect size transformations or formulas were applied. If this description is deemed too lengthy, it can be added to a supplementary file, which also includes code, or a text protocol of the power analysis as provided by G\*Power.
+
+A fourth key component that must be reported is the statistical test. Omitting this detail would not be problematic if studies tested only a single hypothesis on one dependent variable, but as discussed previously, this is rarely the case. For instance, consider a study that fails to specify the statistical test used in the a priori power analysis while reporting a two-way within-subject ANOVA with three groups and three measurements (pre- vs. 1-hour post vs. 24-hour post), followed by pairwise comparisons. Without explicitly stating the statistical test(s) for which the a priori power analysis was conducted, it becomes difficult for peers to assess whether the sample size is appropriately justified based on the a priori power analysis. Research indicates that these tests often do not match [@bakker_2020; @mckay_repro_2023], which is problematic since each test within a given research design has a distinct level of power.
+
+In essence, a detailed description of an a priori power analysis should include the rationale of the chosen effect size, the statistical test–for factorial designs researchers should report the number of factors, and whether they are within- and/or between-subject, the number of levels for any given factor as well as the correlation between levels for a within-subject factor–, the type and magnitude of the effect size, intended power and a. Ideally, details of the computation should preferably be provided in a reproducible script. Alternatively, researchers should provide all details in text or supplementary files. Software packages such as G\*Power and Superpower [@superpower_2021] can export the performed a priori power analysis as a text or PDF file. If the software package cannot export the power analysis, adding a screenshot of the power analysis to the supplementary file should suffice.
+
+### Rationale for choosing an effect size
+
+The best, albeit difficult, rationale for selecting an effect size is by establishing the smallest effect size of interest, or SESOI [@lakenssamplejustification]. The SESOI is the smallest effect that would lead researchers to conclude that a certain effect has practical or theoretical implications. Readers are referred to Anvari & Lakens [-@anvari_sesoi] for an overview of methods for determining the SESOI, and to Cook et al. [-@cook2014] and Keefe et al. [-@keefe2013] for methods for determining the SESOI in clinical trials. In sports and exercise science, defining the SESOI would allow researchers to design more informative studies and test for the absence of an effect [@lakens_equivalence_2017; @mazzolari_2022]. Although defining the SESOI remains uncommon in sports and exercise science, some examples are starting to emerge. For example, Carlson et al. [-@carlson_2022] investigated whether high-effort, low-volume resistance training and low-effort, high-volume resistance training produced similar levels of fat loss. The SESOI was set to 3.3% (unstandardised effect size) based upon recommendations from the American College of Sports Medicine Position Stand regarding weight loss.
+
+Similarly, Gschneidner et al. [-@steel_2024] examined whether performing resistance training with a partial range of movement at a long muscle length would produce similar gains in muscle cross-sectional area in comparison to performing resistance training with a full range of motion. The authors focused on the difference in differences between the two interventions in a pre-post design and predicted an effect size of \~0.025. The rationale was that both interventions would increase cross-sectional area, but the expected difference between them would be minimal, corresponding to an attenuated interaction. They set the SESOI to 0.1, consistent with the meta-analysis of Varovic et al. [-@varovic_2024], and chose to perform an equivalence test as they had anticipated that the difference between the two interventions would not be practically meaningful.
+
+Sometimes theoretical predictions derived from a computational model can be used as a rationale for determining an effect size of interest [@lakenssamplejustification]. However, theory development has been largely neglected in sports and exercise science [@ranganathan_2023; @steele_periodisation_2023]. Consequently, the field tends to focus on predicting the mere presence and direction of effects rather than testing precise range predictions [@meehl1967]. As a result, relying on computational models to derive effect sizes is not feasible in many areas of sports and exercise science research.
+
+While establishing the SESOI is challenging, these examples demonstrate it is feasible, although subfields might need to perform dedicated research lines to establish a meaningful smallest effect size of interest. If researchers aim to design more informative studies, adopting the SESOI framework will lead to the most informative studies.
+
+#### Previous study
+
+When researchers cannot perform an a priori power analysis based on the SESOI, alternative approaches can be used to choose the effect size for an a priori power analysis, but these approaches come with substantial limitations. The most common justification in sports and exercise science is to select the effect size of interest based on a previous study. When using this approach, researchers should ensure that their new study is highly similar to the original, in terms of research design, population, manipulation and primary outcome [@lakenssamplejustification]. In our experience, a common issue arises when researchers conduct an a priori power analysis for a study design that does not match the study design of the current study, or justify an interaction effect using a Cohen’s *d* reported in a previous study (see supplementary file for a detailed explanation), thereby overlooking the research design of the original study. As discussed, whether the selected Cohen’s *d* is an accurate estimate of the interaction effect depends on the type of interaction [@sommet2023].
+
+```{r crit_d_example}
+#| echo: false
+#| warning: false
+
+n <- 15         # sample size per group
+alpha <- 0.05   # alpha level
+
+crit_d <- critical_t2s(n1 = n, n2 = n, var.equal = TRUE, 
+                       hypothesis = "two.sided", conf.level = 0.95)
+```
+
+```{r power_example}
+#| echo: false
+
+# Conduct power analysis
+power <- 0.8   
+es <- 0.3     
+res <- pwr.t.test(power = power, 
+                  d = es, 
+                  type = "two.sample", 
+                  alternative = "greater")
+```
+
+```{r power_example_2}
+#| echo: false
+
+# Conduct power analysis
+power <- 0.8    
+es <- 0.75    
+res2 <- pwr.t.test(power = power, 
+                   d = es, 
+                   type = "two.sample", 
+                   alternative = "greater")
+```
+
+Even if similar studies are available, it is likely that they have an underpowered design and consequently provide effect size estimates with substantial uncertainty that are likely to be inflated due to publication bias [@mesquida_zcurve_2025]. To illustrate, consider a scenario where the true effect size corresponds to a Cohen’s *d~s~* = `r es`. Assuming that the typical sample size in sports and exercise science is about 30 participants, the minimal statistically detectable effect (*d~crit~*) for a between-subject study can be computed as follows [@perugini2025]:
+
+$$
+d_{\mathit{crit}} = t_{\mathit{crit}} \sqrt{\frac{1}{n_1} + \frac{1}{n_2}} 
+$$ {#eq-1.2}
+
+where *t~crit~* = 2.05 when $\alpha$ = `r alpha` and $n$ = `r n*2` (n = `r n` per group). With a sample size of `r n` participants per group and $\alpha$ = `r alpha`, @eq-1.2 returns *d~crit~* = `r round(crit_d$dc, 2)` which suggests that, in the presence of extreme publication bias, only studies that observe effect sizes larger than *d* = `r round(crit_d$dc, 2)` will be published—even if the true effect size is smaller (e.g., *d* = 0.3)—. If researchers base their a priori power analysis on these inflated estimates from a literature that suffers from publication bias, they are likely to end up designing studies with lower statistical power than intended [@anderson_sample_planning]. For example, assuming a true effect size corresponding to a Cohen’s *d~s~* = `r es` and using a one-tailed *t*-test, a total sample size of `r ceiling(res$n*2)` participants would be needed to achieve `r power*100`% power. However, if a researcher instead relied on the inflated estimate (*d~s~* = `r round(crit_d$dc, 2)`), they would erroneously conclude that only `r ceiling(res2$n*2)` participants were required, leading to a study with an underpowered design. This perpetuates a vicious cycle, where underpowered studies, combined with publication bias and flexibility in data analysis, yield inflated effect sizes. When these inflated estimates are then used in a priori power analyses, they will lead to further underpowered designs, thereby reinforcing the problem.
+
+Given these issues, researchers should not simply select an effect size from a published study at face value if researchers have reasons to suspect that there is strong publication bias, or the true effect size is much smaller than the effect size reported in a study. Instead, researchers should consider two approaches to guard against uncertainty and publication bias [@anderson_sample_planning; @perugini_guidelines]. The easy-to-implement approach is known as safeguard power analysis, which requires researchers to base the power analysis on the lower boundary of the CI of the effect size [@perugini2014]. M. Perugini et al. [-@perugini2014] suggest computing the lower boundary of a 60% CI, which can be increased up to a very conservative 95% criterion. A second approach is to use the R package BUCSS [@anderson_sample_planning] or its user-friendly web app (available at www.DesigningExperiments.com) to estimate sample sizes while accounting for varying degrees of uncertainty and publication bias. However, in cases where there is high uncertainty, these methods will return a lower bound for the effect size of 0 or less, resulting in an infinite required sample size. In these cases, researchers should instead determine a SESOI using their own theoretical expertise.
+
+#### Meta-analysis
+
+An alternative to selecting an effect size from a previous study is to use an effect size estimate from a meta-analysis, if a meta-analysis has been performed. While a meta-analysis can provide a more accurate estimate of the true effect size, there are several considerations when using a meta-analytic effect size. First, the presence of publication bias in the published literature will result in meta-analyses that yield overestimated effect sizes [@ciria_umbrella_review; @holgado2023; @mckay_bias_2023; @mckay_feedback_2022]. To mitigate this, researchers should prioritise meta-analytic effect sizes that have been corrected for publication bias using state-of-the-art methods such as PET-PEESE [@stanley_pet_2014] and *p*-uniform [@vanaert2016]. If the meta-analysis does not report any adjusted effect size for publication bias, researchers might consider performing the test for publication bias themselves, when possible. Another issue with meta-analyses is heterogeneity, which refers to variation in the distribution of effect sizes beyond the level expected by sampling variation alone. Heterogeneity is caused by moderators, such as different operationalisations of the primary outcome, study designs, procedures, or populations [@kenny_judd_2019; @vanerp2017]. When heterogeneity is high, researchers should select a meta-analytic effect size from studies or a subsample of studies that most closely resemble their planned study in terms of research design, population, primary outcome, and manipulation [@lakenssamplejustification] .
+
+#### Cohen’s *d* or field-specific thresholds
+
+One way to choose an effect size is by relying on Cohen’s *d* thresholds. This approach is problematic because Cohen’s *d* thresholds to define *small*, *medium* and *large* effect sizes are “*arbitrary conventions, recommended for use only when no better basis for estimating the effect size is available*” [@cohen1988, p. 12]. Indeed, Cohen’s *d* thresholds are based on standardised effect sizes scaled according to effects observed in the late 1980s in the domains of clinical and social psychology [@cohen1988]. Hence, the use of Cohen’s *d* thresholds to justify effect sizes in a priori power ignores that outcome variables, types of intervention, participants or study designs are completely different to those observed in the domain of clinical and social psychology, which is critical to interpret effect sizes [@panzarella_2021; @primbs2022]. Sports and exercise researchers should not expect Cohen’s *d* thresholds to generalise to their scientific domains, and therefore, these thresholds should not be used as a rationale to select effect sizes. Benchmarks never lead to a well-justified a priori power analysis, because there will always be differences between the study that is performed and field-specific thresholds. For instance, Swinton et al. [-@swinton2022] reported effect size thresholds for changes in strength, power, jump and sprint performance following strength and conditioning interventions, which included several types of training modes (i.e., resistance, resistance and power, plyometric) or types of participants (untrained, recreationally trained and highly trained). This study shows that there is large variability between studies, which makes field-specific thresholds inappropriate even if a researcher is conducting a study to investigate the effect of a new strength and conditioning intervention. Field-specific benchmarks can at best function as a basic sanity check. For instance, effect sizes in strength and conditioning research are typically below Cohen’s *d* = 0.3 [@swinton_murphy_2022]. Therefore, a researcher using a Cohen’s *d* = 1 in an a priori power analysis needs to provide strong reasons for not caring about smaller effect sizes.
+
+### A priori power analyses do not lead to larger sample sizes and a higher proportion of tested hypotheses
+
+In fields characterised by small samples and underpowered designs, one might expect that conducting a priori power analyses would lead to larger sample sizes and a higher proportion of supported hypotheses—assuming that studies reporting an a priori power analysis and those studies that do not investigate the same effects—. However, our findings show no significant differences in sample size or the proportion of supported hypotheses between these groups. One unlikely explanation is that studies reporting an a priori power analysis tend to investigate larger effects, which, all things equal, may require the same sample size to achieve adequate statistical power. This would require that researchers can accurately predict when effect sizes are small, and that they preferentially perform power analyses when they expect smaller effects. However, a more concerning explanation is that a priori power analyses are not conducted following best practices.
+
+First, researchers fail to carefully consider whether the effect they aim to detect in their study corresponds to the effect size selected for the a priori power analysis [@brysbaert_guidelines; @langenberg_tutorial; @sommet2023]. For instance, if researchers design a study to detect an attenuated interaction effect, they should ensure that the effect size used in the a priori power analyses matches the expected attenuated interaction, rather than simply selecting a Cohen’s *d* or defaulting to a large effect size reported in a previous study. These practices undermine the purpose of a priori power analyses. If researchers cannot accurately estimate the effect size of interest, they should consult experts with the relevant knowledge. Alternatively, conducting a sensitivity analysis can inform peers about the minimal significant effect sizes that the study design could detect, given the sample size, but researchers should ask themselves if this minimum effect is small enough to capture all meaningful effects. Second, researchers sometimes miscalculate the effect size, which in practice can result in extremely large effect sizes. Researchers might incorrectly use the standard error of measurement instead of the standard deviation when computing a standardised effect size, or use implausibly large correlations to calculate *d~z~*. Second, researchers engage in what Schulz & Grimes [-@sample_size_bamba] call the ‘sample size samba’, which involves performing the power analysis a posteriori using an ‘expected’ effect size that conveniently yields their collected sample size. Regrettably, without preregistration, it is not possible to transparently evaluate whether the power analysis was performed before the data was collected, and this is not a common practice in the field. Third, researchers unknowingly base their effect sizes on inflated values from previous studies. This concern is highly plausible given that the sport science replication project found a median decrease of 75% in replicated effect sizes [@murphy_replicability_2025], and most effect sizes used in a priori power analyses are obtained from previous studies. Fourth, researchers using G\*Power erroneously use the default effect size specification (“as in G\*Power”), which accounts for the correlation between measurements twice, resulting in a smaller sample size than intended. To sum up, these issues result in sample sizes that are smaller than required, undermining the purpose of a priori power analysis.
+
+One reason researchers perform the ‘sample size samba’ is that the a priori power analysis returns a required sample size that exceeds the sample size researchers can afford to collect, given their resource constraints. If this is the case, researchers have three options. First, they can choose not to conduct the study, as the sample size is too small to draw informative conclusions due to low power. However, it is not desirable if researchers stop studying certain populations, only because it is too costly to perform high-powered studies, and any study contributes some knowledge, even if limited [@lakenssamplejustification]. In such situations, researchers can choose to conduct the study while explicitly acknowledging they cannot draw informative conclusions due to the small sample size, and state that the main reason for collecting the data is for its inclusion in a future meta-analysis. Researchers should make the data available to facilitate a future meta-analysis and refrain from making strong claims in their own article, especially about the absence of effects. The most effective approach, particularly for researchers interested in small effects that require large sample sizes to achieve sufficient statistical power, is to collaborate with other researchers and collect sufficiently large samples in larger collaborative research teams.
+
+A limitation of our study is that our study selection protocol included only studies that used a *t*-test or an *F*-test. As a result, our findings cannot be generalised to studies employing other statistical methods, such as mixed models. By excluding these other statistical analyses, our study may not accurately represent the full range of power analyses conducted in the published literature, limiting the overall generalizability of our findings.
+
+```{r}
+#| echo: false
+
+total_prop_repro <- cleaned_data %>%
+  filter(power_analysis == "a priori") %>%
+  select(reproducibility) %>%
+  mutate(reproducibility = if_else(reproducibility == "fully non-reproducible", 
+                                                      "non-reproducible", 
+                                                      reproducibility)) %>%
+  group_by(reproducibility) %>%
+  summarise(n = n()) %>%
+  mutate(prop = n / sum(n)*100, 0) %>%
+  arrange(desc(prop)) 
+```
+
+## Conclusion
+
+Despite the importance of designing high-powered studies, only `r prevalence_power[1, 3]`% (`r prevalence_power[1,2]`/ `r nrow(data)`) of hypothesis-testing studies reported an a priori power analysis. Of these, `r round(total_prop_repro[1, 3], 0)`% (`r total_prop_repro[1, 2]`/`r prevalence_power[1,2]`) were *non-reproducible,* `r ceiling(total_prop_repro[2, 3])`% (`r total_prop_repro[2, 2]`/`r prevalence_power[1,2]`) were *conditionally reproducible* and `r round(total_prop_repro[3, 3], 0)`% (`r total_prop_repro[3, 2]`/`r prevalence_power[1,2]`) were *reproducible.* Notably, one-third of a priori power analyses lacked a solid justification for the selected effect size. Furthermore, about one fourth of the a priori power analyses selected an effect size based on a previous study, which can be problematic given that the Sports Science Replication Project reported a median reduction of 75% for replication effect sizes [@murphy_replicability_2025]. Our findings indicate that many a priori power analyses were incomplete, ambiguous, and computationally non-reproducible. Additionally, we observe that current a priori power analyses do not significantly increase sample size or the proportion of supported hypotheses, suggesting that they are poorly conducted. Sports and exercise scientists must ensure that a priori power analyses are meticulously conducted and transparently reported, providing all necessary details to enable reproducibility and accurate assessment. It might be necessary to consult researchers with expertise in a priori power analyses, similar to how biostatisticians support researchers in medicine. Journals and reviewers should ensure that a priori power analyses are performed and reported correctly. Our findings raise serious concerns about a central aspect of designing informative studies in sports and exercise science. To enhance the informative value of hypothesis-testing studies, it is essential to set higher standards for performing and reporting a priori power analyses.
+
+#### Availability of data and material
+
+The reproducible version of this manuscript, along with the associated data and analysis scripts, is publicly available on the Open Science Framework at [https://doi.org/10.17605/OSF.IO/MQBR2](https://doi.org/10.17605/OSF.IO/MQBR2.){.uri}.
+
+#### Funding
+
+Cristian Mesquida was supported by the Ammodo Science Award 2023 for Social Sciences. Jennifer Murphy was a recipient of the Irish Research Council’s Government of Ireland Postgraduate Scholarship Programme (project ID GOIPG/2020/1155).
+
+#### Conflict of interest
+
+The authors have no conflicts of interest to disclose.
+
+#### Acknowledgments
+
+The authors would like to thank Eline Ensinck who contributed to the data curation of this manuscript.
+
+**CRediT statement**
+
+Cristian Mesquida: conceptualization (lead); investigation (lead); methodology (equal); data collection (equal); data curation (lead); formal analysis (lead); writing - original draft preparation (lead); Jennifer Murphy: conceptualization (equal); data collection (equal); Joe Warne: conceptualization (equal); methodology (equal); data collection (equal); supervision (equal); writing and editing (equal); Daniël Lakens: conceptualization (equal); methodology (equal); data curation (equal); supervision (equal); writing and editing (equal).
+
+```{r}
+#| echo: false
+#| results: hide
+writeLines(capture.output(sessionInfo()), "../session-info.txt")
+```
+
+## References

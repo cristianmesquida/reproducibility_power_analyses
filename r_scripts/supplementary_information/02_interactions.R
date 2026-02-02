@@ -20,7 +20,7 @@ simple_effect <- ggplot(data = df1, aes(x = treatment,
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
         axis.line = element_line(colour = "black")) +
-  theme(text=element_text(size=20))
+  theme(text=element_text(size=12))
 
 
 # disordinal interaction
@@ -48,7 +48,7 @@ disordinal <- ggplot(data = df2, aes(x = treatment,
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
         axis.line = element_line(colour = "black")) +
-  theme(text=element_text(size=20))
+  theme(text=element_text(size=12))
 
 # grand mean = (1 + 0 + 0 + 1) / 4 = 0.5
 # Marginal mean for supplement:morning = 1 - (0.5 + (0.5 - 0.5) + (0.5 - 0.5)) = 0.5
@@ -85,7 +85,7 @@ ordinal <- ggplot(data = df3, aes(x = treatment,
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
         axis.line = element_line(colour = "black")) +
-  theme(text=element_text(size=20))
+  theme(text=element_text(size=12))
 
 # grand mean = (1 + 0 + 0 + 0) / 4 = 0.25
 # Marginal mean for supplement:morning = 1 - (0.25 + (0.5 - 0.25) + (0.5 - 0.25)) = 0.25
@@ -121,7 +121,7 @@ attenuated <- ggplot(data = df4, aes(x = treatment,
         panel.grid.minor = element_blank(),
         panel.background = element_blank(), 
         axis.line = element_line(colour = "black")) +
-  theme(text=element_text(size=20))
+  theme(text=element_text(size=12))
 
 # grand mean = (1 + 0.6 + 0 + 0) / 4 = 0.4
 # Marginal mean for supplement:morning = 1 - (0.4 + (0.8 - 0.4) + (0.5 - 0.4)) = 0.1

@@ -4,58 +4,45 @@ output: html_document
 date: "2025-01-22"
 ---
 
-```{r setup, include=FALSE}
-
-# Load packages
+# Load package
+```{r setup}
 library(here)
+```
 
 # Load function to estimate inter-rater agreement between 3 and 2 coders
-source(here("r_scripts", "inter_coder_agreement", "02_intercoder_agreement_function.R"))
-
+```{r}
+source(here("r_scripts", "intercoder_agreement", "02_intercoder_agreement_function.R"))
 ```
-
 
 # Inter-rater agreement between 3 coders: Fleiss' kappa
-```{r echo=FALSE}
-
+```{r fleiss_kapa}
 # Calculate Fleiss' kappa by coded variable
 agreement_3_coders <- calculate_kappa3_from_excel(here("data/disagreements3.xlsx"))
-
-print(agreement_3_coders)
-
-
 ```
 
-
 # Average Fleiss' kappa
-```{r, echo=FALSE}
-
+```{r average_fleiss}
 # Calculate average Fleiss' kappa after excluding hypothesis_statement, 
 # statistical result, type effect, preregistration, public_data_repository and 
 # link_data_repository
-mean(agreement_3_coders[-c(15, 19:23), 2]) 
 
+average_fleiss <- mean(agreement_3_coders[-c(15, 19:23), 2]) 
 ```
 
 
 # Inter-rater agreement between 2 coders: Cohen's kappa
-```{r echo=FALSE}
-
+```{r cohen_kappa}
 # Calculate Cohen's kappa by coded variable
-agreement_2_coders <- calculate_kappa2_from_excel(here("data/disagreements2.xlsx"))
-
-print(agreement_2_coders)
-
+agreement_2_coders <- calculate_kappa2_from_excel(here("data/disagreements2.xlsx")) 
 ```
 
 # Average Cohen's Kappa
-```{r echo=FALSE}
-
+```{r average_cohen}
 # Calculate average Cohen's Kappa after excluding hypothesis_statement, 
 # statistical result, type effect, preregistration, public_data_repository and 
 # link_data_repository
-mean(agreement_2_coders[-c(15, 19), 2])
 
+average_cohen <- mean(agreement_2_coders[-c(15, 19), 2])
 ```
 
 

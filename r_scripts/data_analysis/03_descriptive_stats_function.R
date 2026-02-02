@@ -1,7 +1,7 @@
 ## This script contains the code to call the function descriptive_stats() to 
 ## estimate the mean, standard deviation, median, range and number of rows of cases
 
-# We create a function to calculate descriptive data including meand, sd, median 
+# We create a function to calculate descriptive data including means, sd, median 
 # and range
 descriptive_stats <- function(x) {
 
