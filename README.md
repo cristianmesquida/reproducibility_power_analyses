@@ -33,7 +33,7 @@ reproducibility_power_analyses/
 │       ├── 01_checking_disagreements.R            # Produces disagreements3.xlsx & disagreements2.xlsx
 │       ├── 02_intercoder_agreement_function.R     # Functions to assess intercoder agreement
 │       └── 03_intercoder_agreement.Rmd            # Results of intercoder agreement
-│   ├── data_analysis/                             # Scripts for statistical analyses
+│   └── data_analysis/                             # Scripts for statistical analyses
 │       ├── 01_consolidate_data.R                  # Merge columns after resolving disagreements
 │       ├── 02_clean_data.R                        # Clean and process data
 │       ├── 03_descriptive_stats_function.R        # Function used in 07_descriptive_es.Rmd
