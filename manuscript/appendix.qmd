@@ -1,0 +1,298 @@
+---
+title: "Supplemental material"
+format: pdf
+bibliography: references.bib
+csl: sports-medicine.csl
+---
+
+## Example of extremely large effect size
+
+@fig-fig1.1 illustrates that some a priori power analyses report extremely large effect sizes. However, this does not necessarily imply that such large effect sizes are implausible. Certain manipulations can yield very large effect sizes. For example, consider the Cohen’s *d* of 3.18 reported in the study of Takei et al. 2021 [-@takei2021], which was obtained from a within-subject study examining the effect of three hypoxic conditions on power output during 4 x 30-second all-out efforts [@kon2015] (@fig-fig1.1). This large effect size is plausible as a large decrease in power output over consecutive all-out efforts should be expected. However, whether this effect size was a reasonable justification for the effect size of interest is questionable. The authors aimed to determine whether acute moderate hypoxia, compared to normoxia, had no detrimental effect on power output during 3 x 30-s all-out efforts. To estimate the effect of hypoxia, a direct comparison between the hypoxic condition(s) and the normoxic condition would be necessary. Yet, the calculated Cohen’s *d* of 3.18 corresponds to the effect of all-out efforts[^1], not to the effect of hypoxia. The effect of hypoxia would be much smaller than the effect of the all-out efforts since it would correspond to the change in power output from bout 1 to the subsequent bouts between the the hypoxic and normoxic conditions.
+
+[^1]: “The sample size was estimated using a power analysis software G\*Power (version 3.1.9.2; Bonn University, Bonn, Germany) based on the mean effect (*d* = 3.18) of the within-condition decrement to peak and mean power output during repeated 30-s Wingate efforts.^10^ The power analysis resulted in a calculated total sample size of 4 participants.”
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| label: fig-fig1.1
+#| fig-cap: "Pattern of means reported across 4 bouts and experimental condition. Figure 1 has been created using the means reported in Table 1 of the original study (Kon et al. 2015), from which the effect size (3.18) was derived."
+#| fig-width: 6
+#| fig-height: 3
+
+# Load packages
+library(patchwork)
+library(ggplot2)
+library(here)
+
+# Simulate data
+df <- data.frame(
+  intervention = factor(c("normoxia", "moderate hypoxia", "severe hypoxia",
+                          "normoxia", "moderate hypoxia", "severe hypoxia",
+                          "normoxia", "moderate hypoxia", "severe hypoxia",
+                          "normoxia", "moderate hypoxia", "severe hypoxia")),
+  time = factor(c("Bout 1", "Bout 1", "Bout 1",
+                  "Bout 2", "Bout 2", "Bout 2",
+                  "Bout 3", "Bout 3", "Bout 3",
+                  "Bout 4", "Bout 4", "Bout 4"), 
+                levels = c("Bout 1", "Bout 2", "Bout 3", "Bout 4")),
+  effect = c(845, 812, 790, 804, 795, 783, 751, 755, 739, 705, 705, 685))
+
+# Plot with color-blind friendly palette
+ggplot(data = df, aes(x = time, 
+                       y = effect, 
+                       group = intervention, 
+                       shape = intervention)) +
+  geom_line(size = 0.5) +
+  geom_point(size = 2, fill = "white") +
+  xlab(NULL) +
+  ylab("Power output (W)") +
+  scale_y_continuous(limits = c(600, 900), 
+                     breaks = seq(600, 900, by = 50)) +
+  theme(legend.title = element_blank(),  
+        legend.position = "right", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(text = element_text(size = 12))
+```
+
+Another issue is the lack of adequate justification for the choices researchers make during a priori power analyses. For instance, one study used a Cohen’s *d~z~* of 0.94 for its a priori power analysis, justifying this choice based on a previous study examining the effect of omitting breakfast on evening endurance performance despite complete dietary compensation at lunch. However, such a large effect size appears implausible given that the overall energy intake and macronutrient profile were identical between conditions. Furthermore, the study from which the effect size was calculated employed a within-subject design and reported that the time taken to complete the time trial in the breakfast trial (465.7 ± 43.3s) was shorter compared with the breakfast omission condition (469.2 ± 43.4s). The original study does not report *t*-statistics so it is likely that the authors used equation (8) from Lakens [-@lakens_calculating_es], which requires the correlation between measurements to compute Cohen’s *d~z.~* To obtain the reported Cohen’s *d~z~* of 0.94 using the reported means and standard deviations (SD) requires a correlation of 0.99632 between measurements. The correlation estimate heavily influences the estimated Cohen’s *d~z~*. For example, assuming a correlation of 0.8 and using the same means and SD, equation (8) returns a Cohen’s *d~z~* of 0.13. An a priori power analysis aimed at detecting a Cohen's *d~z~* of 0.13, with a desired statistical power of 80% and $\alpha$ level of 0.05 requires a total sample size of 467 participants as opposed to the sample size of 11 reported in the study in question. The correlation used to determine a sample size of 11 seems highly unrealistic.
+
+## Estimating an interaction effect size based on a Cohen’s *d* in a two between-subject factorial design
+
+Researchers often conduct studies to test whether an effect is moderated by a second factor that suppresses, exacerbates or reverses the effect caused by a first factor—what is known as an interaction effect—. In our experience, many researchers assume it is reasonable to select an effect size from a previous study that employed a simple design (i.e., one or two groups) to conduct an a priori power analysis for an interaction effect. This practice also applies to factorial design where one factor has two levels (df~1~ = 1). However, whether the selected effect size is a valid estimate of the interaction effect depends on the type of interaction or pattern of means that researchers expect to observe­. Broadly speaking, there are three types of interactions: ordinal, disordinal and attenuated (@fig-fig1.2). For a detailed discussion of how different interaction types influence statistical power, readers are referred to Sommet et al. [-@sommet2023]. To understand how the patterns of means affect the interaction effect size, it helps to conceive interactions as a “difference of differences” [@langenberg_tutorial; @sommet2023]. Under this conceptualization, a two-way interaction corresponds to the difference between: a) the difference between the two levels of a factor at one level of the second factor and b) the difference between the two levels of a factor at the second level of the second factor.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| label: fig-fig1.2
+#| fig-cap: "Illustration of a simple effect and three types of interaction. (a) shows a simple effect comparing two experimental conditions. (b) depicts an ordinal interaction, where intake time suppresses the effect of the supplement. (c) depicts a disordinal interaction, where intake time reverses the effect of the supplement. (d) depicts an attenuated interaction, where intake time reduces the effect of the supplement."
+#| fig-subcap: true
+#| fig-subrefs: true
+#| layout-ncol: 4
+#| fig-align: center
+#| fig-show: hold
+#| fig-height: 3
+#| fig-width: 4
+
+# Load packages
+library(patchwork)
+library(ggplot2)
+
+# Simple effect
+df1 <- data.frame(treatment = factor(c("supplement","placebo")),
+                 effect = c(1, 0))
+
+simple_effect <- ggplot(data = df1, aes(x = treatment, 
+                                        y = effect, 
+                                        group = 1)) +
+  geom_line(size = 1) +
+  geom_point(size = 4, fill = "white") +
+  xlab(NULL) +
+  scale_shape_manual(values =c (22,21)) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(text=element_text(size=12))
+
+# disordinal interaction
+df2 <- data.frame(treatment = factor(c("supplement",
+                                       "supplement",
+                                       "placebo",
+                                       "placebo")),
+                 time = factor(c("morning",
+                                 "evening",
+                                 "morning",
+                                 "evening")),
+                 effect = c(1, 0.0, 0.0, 1))
+
+disordinal <- ggplot(data = df2, aes(x = treatment, 
+                                     y = effect, 
+                                     group = time, 
+                                     shape = time)) +
+  geom_line(size = 1) +
+  geom_point(size = 4, fill = "white") +
+  xlab(NULL) +
+  ylab(NULL) +
+  scale_shape_manual(values=c(22,21)) +
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(text=element_text(size=15))
+
+# grand mean = (1 + 0 + 0 + 1) / 4 = 0.5
+# Marginal mean for supplement:morning = 1 - (0.5 + (0.5 - 0.5) + (0.5 - 0.5)) = 0.5
+# Marginal mean for supplement:evening = 0 - (0.5 + (0.5 - 0.5) + (0.5 - 0.5)) = -0.5
+# Marginal mean for placebo:morning = 0 - (0.5 + (0.5 - 0.5) + (0.5 - 0.5)) = -0.5
+# Marginal mean for placebo:evening = 1 - (0.5 + (0.5 - 0.5) + (0.5 - 0.5)) = 0.5
+
+# ordinal interaction
+df3 <- data.frame(treatment = factor(c("supplement",
+                                       "supplement",
+                                       "placebo",
+                                       "placebo")),
+                 time = factor(c("morning",
+                                 "evening",
+                                 "morning",
+                                 "evening")),
+                 effect = c(1, 0.0, 0.0, 0))
+
+ordinal <- ggplot(data = df3, aes(x = treatment, 
+                                  y = effect, 
+                                  group = time, 
+                                  shape = time)) +
+  geom_line(size = 1) +
+  geom_point(size = 4, fill = "white") +
+  xlab(NULL) +
+  ylab(NULL) +
+  scale_shape_manual(values=c(22,21)) +
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(text=element_text(size=15))
+
+# grand mean = (1 + 0 + 0 + 0) / 4 = 0.25
+# Marginal mean for supplement:morning = 1 - (0.25 + (0.5 - 0.25) + (0.5 - 0.25)) = 0.25
+# Marginal mean for supplement:evening = 0 - (0.25 + (0.5 - 0.25) + (0 - 0.25)) = -0.25
+# Marginal mean for placebo:morning = 0 - (0.25 + (0 - 0.25) + (0.5 - 0.25)) = -0.25
+# Marginal mean for placebo:evening = 0 - (0.25 + (0. - 0.25) + (0 - 0.25)) = 0.25
+
+# attenuated interaction
+df4 <- data.frame(treatment = factor(c("supplement",
+                                       "supplement",
+                                       "placebo",
+                                       "placebo")),
+                 time = factor(c("morning",
+                                 "evening",
+                                 "morning",
+                                 "evening")),
+                 effect = c(1, 0.6, 0.0, 0.0))
+
+attenuated <- ggplot(data = df4, aes(x = treatment, 
+                                     y = effect, 
+                                     group = time, 
+                                     shape = time)) +
+  geom_line(size = 1) +
+  geom_point(size = 4, fill = "white") +
+  xlab(NULL) +
+  ylab(NULL) +
+  scale_shape_manual(values=c(22,21)) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  theme(text=element_text(size=15))
+
+simple_effect
+ordinal
+disordinal
+attenuated
+```
+
+An advantage of this approach is that researchers can conduct an a priori power analysis for an interaction effect using a *t-*test, requiring only the specification of an expected effect size in terms of Cohen’s *d.* In a 2 x 2 between-subject design, the interaction effect can be calculated as follows [@sommet2023]:
+
+$$
+d_{\text{int}} = 
+\frac{(E_1 - C_1)}{\text{Pooled SD}} -
+\frac{(E_2 - C_2)}{\text{Pooled SD}} =
+\frac{(E_1 - C_1) - (E_2 - C_2)}{2 \times \text{Pooled SD}}
+$$ {#eq-1.1}
+
+where E and C refer to the experimental and control group, respectively, and the subscripted numbers refer to the levels of the second factor. Thus, *d~int~* is computed as the difference between two standardised mean differences (*d~s~*) from the two main effects. To illustrate how the pattern of means affects *d~int~*, imagine a study testing whether the effect of a supplement is moderated by the intake time (i.e., morning vs. afternoon) using a 2 x 2 between-subject design. Specifically, suppose we hypothesize that taking the supplement in the evening will knock out the effect of taking the supplement in the morning—what is known as an ordinal interaction (@fig-fig1.2-2)—. We base our a priori power analysis on a previous two-group study that found the supplement improved cycling time to exhaustion in comparison to a placebo. Assuming a common SD of 2, the observed improvement corresponds to an effect size of:
+
+$$
+d_s = \frac{(1 - 0)}{2} = 0.5 \quad 
+$$
+
+Plugging *d~s~* = 0.5, $\alpha$ = 0.05, and statistical power = 0.8 into G\*Power yields a total sample size of 128 for a two-sided unpaired *t*-test, or 32 participants for each of the four groups in our 2 x 2 factorial design. However, this a priori power analysis is invalid because the selected effect size does not correspond to the hypothesized ordinal interaction (@fig-fig1.2-2). Using @eq-1.1, the expected pattern of means results in:
+
+$$
+d_{\text{int}} = \frac{(1 - 0) - (0 - 0)}{2 \times 2} = 0.25
+$$
+
+Plugging *d~int~* = 0.25, $\alpha$ = 0.05, and statistical power = 0.8 into G\*Power yields a total sample size of 506 for an unpaired *t*-test, or about 127 participants per group. In contrast, for a disordinal interaction (@fig-fig1.2-3), the pattern of means would correspond to a larger effect size of *d~int~* = 0.5 using @eq-1.1:
+
+$$
+d_{\text{int}} = \frac{(1 - 0) - (0 - 1)}{2 \times 2} = 0.5
+$$
+
+In this case, using *d~s~* = 0.5 in an a priori power analysis would be clearly invalid and only appropriate in the case that a reverse interaction was expected. Lastly, for an attenuated interaction (@fig-fig1.2-4), where evening intake reduces (but does not eliminate) the supplement’s effect, using @eq-1.1, the pattern of means would correspond to:
+
+$$
+d_{\text{int}} = \frac{(1 - 0) - (0.6 - 0)}{2 \times 2} = 0.1
+$$
+
+Plugging *d~int~* = 0.1, $\alpha$ = 0.05, and statistical power = 0.8 into G\*Power for a two-sided unpaired *t*-test yields a total sample size of 3142, or 786 participants per group. These examples underscore how misestimating the interaction effect can severely distort the required sample size, potentially leading to invalid a priori power analyses.
+
+As previously noted, since *d~int~* is derived from the difference between two standardised effect sizes (*d~s~*), a priori power analyses for interactions can be performed using an unpaired *t*-test with *d~int~* as the effect size. Alternatively, this method is mathematically equivalent to conducting an a priori power analysis in n G\*Power for a 2 x 2 between-subject ANOVA with the interaction effect size expressed as:
+
+$$
+f = \frac{d_{\text{int}}}{2}
+$$ {#eq-2}
+
+## Estimating an interaction effect size based on a Cohen’s *d* in a two mixed factorial design or two within-subject ANOVA
+
+The difference-in-differences approach can be extended to mixed factorial designs and within-subject designs [@langenberg_tutorial; @sommet2023] where the same principle still holds. That is, *d~int~* boils down to a standardised mean difference for which a priori power analyses can be conducted using a *t*-test. The key difference is that the correlation between measurements must be considered. “Int×Power” is a user-friendly web app that allows researchers not only to easily estimate their expected two-way between-subject interaction and required total sample size to achieve the desired level of power, but also to estimate their expected interaction in 2 x 2 mixed designs assuming a conservative correlation estimate = 0.5 [@sommet2023]
+
+To estimate an interaction effect for a 2 x 2 within-subject factorial design, in addition to the four cell means [@tbl-tbl1.1], we need the within-subject factor variance ($\sigma^2$ = SD^2^) and the correlation ($\rho$) between measurements. For easiness, we will assume equal variances among the 4 conditions ($\sigma^2$ = 2^2^) as well as a common correlation ($\rho$ = 0.8). For a detailed tutorial about how to calculate an interaction effect from a 2 x 2 within-subject design using different variances, readers are referred to Langenberg et al. [-@langenberg_tutorial].
+
+|                    | Factor A (level 1) | Factor A (level 1) |
+|:------------------:|:------------------:|:------------------:|
+| Factor B (level 1) |         10         |         9          |
+| Factor B (level 2) |         9          |         9          |
+
+: Cell means in a 2 x 2 within-subject design. {#tbl-tbl1.1}
+
+To calculate the interaction effect size, we first need to compute the difference of differences as follows:
+
+$$
+\text{diff}_{A:B} = (A_1B_1 - A_1B_2) - (A_2B_1 - A_2B_2) \\
+$$ {#eq-1.2}
+
+$$
+\text{diff}_{A:B} = 10 - 9 - 9 + 9 \\
+$$
+
+$$
+\text{diff}_{A:B} = 1
+$$
+
+We then need to compute the covariance, which in a 2 x 2 within-subject design can be computes using @eq-1.3:
+
+$$
+\sigma^2_{\text{diff}_{A:B}} = 2^k \cdot \sigma^2 - 2^k \cdot \sigma_{\text{cov}}
+$$ {#eq-1.3}
+
+$$
+\sigma^2_{\text{diff}_{A:B}} = 2^2 \cdot 2^2 - 2^2 \cdot (\sigma^2 \cdot \rho)
+$$
+
+$$
+\sigma_{\text{diff}_{A:B}}^2 = 4 \cdot 4 - 4 \cdot (4 \cdot 0.8)
+$$
+
+$$
+\sigma^2_{\text{diff}_{A:B}} = 3.2
+$$
+
+where *k* denoting the number of factors in the study design (i.e., *k* = 2). Once we have calculated diff~A:B~ and $\sigma_{diffA:B}^2$ we can calculate Cohen’s *d~int~* using @eq-1.4:
+
+$$
+d_{\text{int}} = \frac{\text{diff}_{A:B}}{\sqrt{\sigma_{\text{diff}_{A:B}}}}
+$$ {#eq-1.4}
+
+$$
+d_{\text{int}} = \frac{1}{\sqrt{3.2}}
+$$
+
+Plugging *d~int~* = 0.56, $\alpha$ = 0.05, and statistical power = 0.8 into G\*Power yields a total sample size of 28 participants for a two-sided paired *t*-test. This *t*-test approach would also be mathematically equivalent to conducting an a priori power analysis for a 2 x 2 within-subject ANOVA as the statistical test to detect an interaction effect size *f* = *d~int~* in G\*Power. Alternatively, if the standardised mean difference between $A_1B_1$ and $A_1B_2$, and between $A_2B_1$ and $A_2B_2$ were reported as *d~z~,* researchers could plug the average of these two *d~z~* in G\*Power to estimate the interaction effect size [@brysbaert_guidelines].
+
+### References
