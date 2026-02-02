@@ -6,7 +6,7 @@ This repository contains all materials, data and code to reproduce the analyses 
 
 ```
 reproducibility_power_analyses/
-├── preregistration.pdf               # Preregistration document
+├── preregistration_OSF.pdf           # Preregistration document
 |
 ├── manuscript/ 
 │   ├── preprint.pdf                  # Preprint of the study
